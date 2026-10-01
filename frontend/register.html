@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Register | Green Forest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-page="register" class="auth-page">
+  <main class="auth-card">
+    <div class="brand brand-center">
+      <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
+        <rect width="24" height="24" rx="6" fill="#0f4d1f" />
+        <path d="M6 18c0-8 5-12 12-12 0 8-4 12-12 12z" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" />
+        <path d="M6 18l7-7" stroke="#fff" stroke-width="1.6" stroke-linecap="round" />
+      </svg>
+      <span>Green Forest</span>
+    </div>
+
+    <h1>Create your account</h1>
+    <p class="subtitle">Buy, rent and care for plants in one place.</p>
+
+    <div id="message" class="alert hidden"></div>
+
+    <form id="registerForm" novalidate>
+      <div class="form-group">
+        <label for="name">Full name</label>
+        <input type="text" id="name" placeholder="Jeba Raisa" autocomplete="name" required />
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="you@example.com" autocomplete="email" required />
+      </div>
+
+      <div class="form-group">
+        <label for="role">I am a</label>
+        <select id="role">
+          <option value="User">Customer</option>
+          <option value="Nursery">Nursery owner</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Create a password" autocomplete="new-password" required />
+        <small class="hint">8+ characters with an uppercase letter, a lowercase letter and a number.</small>
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">Confirm password</label>
+        <input type="password" id="confirmPassword" placeholder="Repeat your password" autocomplete="new-password" required />
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Create Account</button>
+    </form>
+
+    <p class="switch-text">Already have an account? <a href="login.html">Log in</a></p>
+  </main>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
