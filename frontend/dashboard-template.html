@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PAGE TITLE | Green Forest</title>   <!-- 1. change the title -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<!-- data-page = unique name for this page. data-layout="dashboard" turns on the shared sidebar -->
+<body data-page="PAGE_NAME" data-layout="dashboard">
+  <div class="app-layout">
+
+    <!-- Filled in automatically by js/layout.js. Leave it empty. -->
+    <aside class="sidebar" id="sidebar"></aside>
+
+    <div class="main">
+      <header class="topbar"><h1>PAGE TITLE</h1></header>   <!-- 2. change the heading -->
+
+      <div class="content">
+        <!-- Shows errors / success messages via showMessage() from app.js -->
+        <div id="message" class="alert hidden"></div>
+
+        <!-- 3. your page content goes here (use .card, .banner, .grid-2 from style.css) -->
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Keep this order: app.js first, then layout.js, then the page's own script -->
+  <script src="js/app.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/pages/PAGE_NAME.js"></script>
+</body>
+</html>
