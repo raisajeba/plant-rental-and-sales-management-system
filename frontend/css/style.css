@@ -1,0 +1,152 @@
+/* ---------- Theme (colors taken from the Green Forest design) ---------- */
+:root {
+  --green-900: #0f4d1f;   /* dark buttons, logo */
+  --green-700: #1b7a2e;   /* primary buttons, links */
+  --green-100: #e5f3e8;   /* mint banner, active menu */
+  --bg: #f2f4f2;          /* page background */
+  --card: #ffffff;
+  --border: #e3e8e4;
+  --text: #14301b;
+  --muted: #6b7a6f;
+  --danger-bg: #fdecea;
+  --danger: #b3261e;
+  --warn-bg: #fff0e0;
+  --warn: #d9640f;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+a { color: var(--green-700); font-weight: 600; text-decoration: none; }
+a:hover { text-decoration: underline; }
+.hidden { display: none !important; }
+
+/* ---------- Brand ---------- */
+.brand { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; }
+.brand-center { justify-content: center; margin-bottom: 20px; }
+.logo { width: 38px; height: 38px; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  border: none; border-radius: 10px; padding: 12px 18px;
+  font: inherit; font-weight: 700; cursor: pointer; transition: background 0.2s, opacity 0.2s;
+}
+.btn-primary { background: var(--green-700); color: #fff; }
+.btn-primary:hover { background: #166526; }
+.btn-dark { background: var(--green-900); color: #fff; }
+.btn-dark:hover { background: #0b3a17; }
+.btn-block { width: 100%; }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ---------- Forms ---------- */
+.form-group { margin-bottom: 16px; }
+label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px; }
+input, select {
+  width: 100%; padding: 12px 14px; font: inherit; color: var(--text);
+  background: #fff; border: 1px solid var(--border); border-radius: 10px;
+}
+input:focus, select:focus { outline: 2px solid var(--green-100); border-color: var(--green-700); }
+.hint { display: block; margin-top: 5px; color: var(--muted); font-size: 12.5px; }
+
+/* ---------- Alerts ---------- */
+.alert { padding: 12px 14px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; white-space: pre-line; }
+.alert-error { background: var(--danger-bg); color: var(--danger); }
+.alert-success { background: var(--green-100); color: var(--green-900); }
+
+/* ---------- Login / Register page ---------- */
+.auth-page {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+  background: linear-gradient(160deg, var(--green-100) 0%, var(--bg) 60%);
+}
+.auth-card {
+  width: 100%; max-width: 440px; background: var(--card);
+  border: 1px solid var(--border); border-radius: 20px; padding: 36px 32px;
+  box-shadow: 0 10px 30px rgba(15, 77, 31, 0.08);
+}
+.auth-card h1 { font-size: 26px; text-align: center; }
+.subtitle { text-align: center; color: var(--muted); margin: 4px 0 24px; }
+.switch-text { text-align: center; margin-top: 20px; color: var(--muted); font-size: 14px; }
+
+/* ---------- App layout (profile page) ---------- */
+.app-layout { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: 260px; flex-shrink: 0; background: var(--card);
+  border-right: 1px solid var(--border); padding: 24px 20px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+.user-chip {
+  display: flex; align-items: center; gap: 12px; padding: 12px;
+  border: 1px solid var(--border); border-radius: 12px;
+}
+.avatar {
+  width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+  background: var(--green-100); color: var(--green-900);
+  display: flex; align-items: center; justify-content: center; font-weight: 700;
+}
+.user-chip-name { font-weight: 700; font-size: 15px; word-break: break-word; }
+.user-chip-role { color: var(--muted); font-size: 13px; }
+
+.nav { display: flex; flex-direction: column; gap: 4px; }
+.nav-link {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  border: none; background: none; border-radius: 10px;
+  font: inherit; font-weight: 600; color: var(--text); cursor: pointer; text-align: left;
+}
+.nav-link:hover { background: var(--bg); text-decoration: none; }
+.nav-link.active { background: var(--green-100); color: var(--green-900); }
+.nav-link svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.logout { margin-top: auto; color: var(--muted); }
+
+.main { flex: 1; min-width: 0; }
+.topbar {
+  background: var(--card); border-bottom: 1px solid var(--border);
+  padding: 22px 40px;
+}
+.topbar h1 { font-size: 24px; font-weight: 600; }
+.content { padding: 32px 40px; max-width: 1100px; }
+
+.banner {
+  background: var(--green-100); border-radius: var(--radius);
+  padding: 28px 32px; margin-bottom: 24px;
+}
+.banner h2 { font-size: 24px; font-weight: 600; }
+.banner p { margin-top: 4px; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 24px;
+}
+.card h3 { font-size: 18px; font-weight: 600; margin-bottom: 18px; }
+
+.detail-list > div {
+  display: flex; justify-content: space-between; gap: 16px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.detail-list > div:last-child { border-bottom: none; }
+.detail-list dt { color: var(--muted); }
+.detail-list dd { font-weight: 600; text-align: right; word-break: break-word; }
+
+.badge {
+  display: inline-block; padding: 2px 12px; border-radius: 6px;
+  background: var(--green-100); color: var(--green-900); font-size: 13px; text-transform: capitalize;
+}
+.badge.inactive, .badge.blocked { background: var(--warn-bg); color: var(--warn); }
+
+/* ---------- Mobile ---------- */
+@media (max-width: 860px) {
+  .app-layout { flex-direction: column; }
+  .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); gap: 12px; }
+  .logout { margin-top: 0; }
+  .topbar, .content { padding: 20px; }
+  .grid-2 { grid-template-columns: 1fr; }
+}
