@@ -33,12 +33,9 @@
      ready = false shows a greyed-out "Soon" link. Set to true when the page exists.
      The ORDER of this list is the order shown in the sidebar. */
   const MENU_ROUTES = [
-    { url: "/plants",      label: "Plants",      file: "plants.html",      icon: "plant",       ready: true  },
-    { url: "/rent-plants", label: "Rent",        file: "rent.html",        icon: "rent",        ready: true  },
-    { url: "/buy-plants",  label: "Buy",         file: "buy.html",         icon: "buy",         ready: true  },
     { url: "/maintenance", label: "Maintenance", file: "maintenance.html", icon: "maintenance", ready: false },
-    { url: "/contact",     label: "Contact Us",  file: "contact.html",     icon: "contact",     ready: false },
-    { url: "/about",       label: "About Us",    file: "about.html",       icon: "about",       ready: false },
+    { url: "/contact",     label: "Contact Us",  file: "contact.html",     icon: "contact",     ready: true  },
+    { url: "/about",       label: "About Us",    file: "about.html",       icon: "about",       ready: true  },
   ];
   const PROFILE_FILE = "profile.html"; // opened from the user card, not the menu
 
