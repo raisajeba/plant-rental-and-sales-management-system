@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contact Us | Green Forest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body data-page="contact" data-layout="dashboard">
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+
+    <div class="main">
+      <header class="topbar"><h1>Contact Us</h1></header>
+
+      <div class="content">
+        <p class="page-intro">Have a question or feedback? Send us a message and we will get back to you by email.</p>
+
+        <div id="message" class="alert hidden"></div>
+
+        <div class="grid-2">
+          <!-- Contact form -->
+          <section class="card">
+            <h3>Send a message</h3>
+            <form id="contactForm" novalidate>
+              <div class="form-group">
+                <label for="name">Your name</label>
+                <input type="text" id="name" maxlength="100" autocomplete="name" required />
+              </div>
+
+              <div class="form-group">
+                <label for="email">Your email</label>
+                <input type="email" id="email" maxlength="255" autocomplete="email" required />
+              </div>
+
+              <div class="form-group">
+                <label for="subject">Subject</label>
+                <input type="text" id="subject" maxlength="150" placeholder="What is this about?" required />
+              </div>
+
+              <div class="form-group">
+                <label for="messageText">Message</label>
+                <textarea id="messageText" maxlength="2000" placeholder="Write your message here (at least 10 characters)" required></textarea>
+                <div class="char-count" id="charCount">0 / 2000</div>
+              </div>
+
+              <button type="submit" class="btn btn-dark btn-block" id="submitBtn">Send Message</button>
+            </form>
+          </section>
+
+          <!-- Side info -->
+          <section class="card">
+            <h3>Other ways to reach us</h3>
+            <dl class="detail-list">
+              <div><dt>Email</dt><dd><a id="contactEmail" href="about.html">Loading...</a></dd></div>
+              <div><dt>About us</dt><dd><a href="about.html">Learn more</a></dd></div>
+            </dl>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/pages/contact.js"></script>
+</body>
+</html>
