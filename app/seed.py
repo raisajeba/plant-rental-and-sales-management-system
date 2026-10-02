@@ -1,75 +1,46 @@
-"""Idempotent startup seed: roles, pages, role-page mapping, optional first admin."""
-import logging
-
-from sqlalchemy import select
+"""Idempotent startup seed: roles, the six menu pages, and which roles can see them."""
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
-from app.core.constants import RoleName
-from app.core.security import hash_password
-from app.models import Page, Role, RolePage, User
-
-logger = logging.getLogger(__name__)
-
-PAGES = [
-    # (page_name, page_url, description)
-    ("Dashboard", "/dashboard", "Main dashboard"),
-    ("Buy Plants", "/buy-plants", "Browse and buy plants"),
-    ("Rent Plants", "/rent-plants", "Browse and rent plants"),
-    ("My Orders", "/my-orders", "Purchase order history"),
-    ("My Rentals", "/my-rentals", "Rental history"),
-    ("Maintenance", "/maintenance", "Plant maintenance records"),
-    ("My Profile", "/profile", "View and edit profile"),
-    ("Nursery Management", "/nursery/manage", "Manage nursery plants and stock"),
-    ("User Management", "/admin/users", "Manage users and roles"),
-]
-
-_COMMON = ["/dashboard", "/buy-plants", "/rent-plants", "/my-orders",
-           "/my-rentals", "/maintenance", "/profile"]
-
-ROLE_PAGES = {
-    RoleName.USER.value: _COMMON,
-    RoleName.NURSERY.value: _COMMON + ["/nursery/manage"],
-    RoleName.ADMIN.value: [p[1] for p in PAGES],  # everything
-}
+from app.core.constants import MENU_PAGES, RoleName
+from app.models import Page, Role, RolePage
 
 
 def seed_initial_data(db: Session) -> None:
-    # Roles
-    roles: dict[str, Role] = {}
-    for rn in RoleName:
-        role = db.scalar(select(Role).where(Role.role_name == rn.value))
-        if role is None:
-            role = Role(role_name=rn.value)
-            db.add(role)
-        roles[rn.value] = role
+    menu_urls = [url for _, url, _ in MENU_PAGES]
 
-    # Pages
-    pages: dict[str, Page] = {}
-    for name, url, desc in PAGES:
+    # 1. The pages table contains ONLY the menu pages. Remove leftovers from earlier
+    #    versions (/dashboard, /my-orders, /profile, /admin/users ...).
+    stale_page_ids = select(Page.id).where(Page.page_url.not_in(menu_urls))
+    db.execute(delete(RolePage).where(RolePage.page_id.in_(stale_page_ids)))
+    db.execute(delete(Page).where(Page.page_url.not_in(menu_urls)))
+
+    # 2. Roles
+    roles: list[Role] = []
+    for role_name in RoleName:
+        role = db.scalar(select(Role).where(Role.role_name == role_name.value))
+        if role is None:
+            role = Role(role_name=role_name.value)
+            db.add(role)
+        roles.append(role)
+
+    # 3. Menu pages (existing ones get their name / description refreshed)
+    pages: list[Page] = []
+    for name, url, description in MENU_PAGES:
         page = db.scalar(select(Page).where(Page.page_url == url))
         if page is None:
-            page = Page(page_name=name, page_url=url, description=desc)
+            page = Page(page_name=name, page_url=url, description=description)
             db.add(page)
-        pages[url] = page
+        else:
+            page.page_name = name
+            page.description = description
+        pages.append(page)
     db.flush()  # assign ids
 
-    # Role <-> Page mapping
-    for role_name, urls in ROLE_PAGES.items():
-        for url in urls:
-            if db.get(RolePage, (roles[role_name].id, pages[url].id)) is None:
-                db.add(RolePage(role_id=roles[role_name].id, page_id=pages[url].id))
-
-    # Optional first admin
-    if settings.ADMIN_EMAIL and settings.ADMIN_PASSWORD:
-        email = settings.ADMIN_EMAIL.lower()
-        if db.scalar(select(User.id).where(User.email == email)) is None:
-            db.add(User(
-                name=settings.ADMIN_NAME or "Administrator",
-                email=email,
-                password=hash_password(settings.ADMIN_PASSWORD),
-                role_id=roles[RoleName.ADMIN.value].id,
-            ))
-            logger.info("Default admin account created")
+    # 4. Every role sees the same six pages for now
+    for role in roles:
+        for page in pages:
+            if db.get(RolePage, (role.id, page.id)) is None:
+                db.add(RolePage(role_id=role.id, page_id=page.id))
 
     db.commit()
