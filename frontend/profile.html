@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Profile | Green Forest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-page="profile">
+  <div class="app-layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
+          <rect width="24" height="24" rx="6" fill="#0f4d1f" />
+          <path d="M6 18c0-8 5-12 12-12 0 8-4 12-12 12z" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" />
+          <path d="M6 18l7-7" stroke="#fff" stroke-width="1.6" stroke-linecap="round" />
+        </svg>
+        <span>Green Forest</span>
+      </div>
+
+      <div class="user-chip">
+        <div class="avatar" id="sidebarAvatar">?</div>
+        <div>
+          <div class="user-chip-name" id="sidebarName">Loading...</div>
+          <div class="user-chip-role" id="sidebarRole">&nbsp;</div>
+        </div>
+      </div>
+
+      <!-- Add more links here as you build more backend features -->
+      <nav class="nav">
+        <a class="nav-link active" href="profile.html">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="3.5" /><path d="M5 20c1-4 4-5.5 7-5.5s6 1.5 7 5.5" /></svg>
+          My Profile
+        </a>
+      </nav>
+
+      <button type="button" class="nav-link logout" id="logoutBtn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5v16h5M15 8l4 4-4 4M19 12H9" /></svg>
+        Logout
+      </button>
+    </aside>
+
+    <!-- Main area -->
+    <div class="main">
+      <header class="topbar"><h1>My Profile</h1></header>
+
+      <div class="content">
+        <section class="banner">
+          <h2 id="welcomeTitle">Welcome back!</h2>
+          <p>Manage your account details from one place.</p>
+        </section>
+
+        <div id="message" class="alert hidden"></div>
+
+        <div class="grid-2">
+          <!-- View profile -->
+          <section class="card">
+            <h3>Account Details</h3>
+            <dl class="detail-list">
+              <div><dt>Name</dt><dd id="detailName">-</dd></div>
+              <div><dt>Email</dt><dd id="detailEmail">-</dd></div>
+              <div><dt>Role</dt><dd id="detailRole">-</dd></div>
+              <div><dt>Status</dt><dd><span class="badge" id="detailStatus">-</span></dd></div>
+              <div><dt>Member since</dt><dd id="detailCreated">-</dd></div>
+              <div><dt>Last updated</dt><dd id="detailUpdated">-</dd></div>
+            </dl>
+          </section>
+
+          <!-- Edit profile -->
+          <section class="card">
+            <h3>Edit Profile</h3>
+            <form id="profileForm" novalidate>
+              <div class="form-group">
+                <label for="name">Full name</label>
+                <input type="text" id="name" required />
+              </div>
+              <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" required />
+              </div>
+              <button type="submit" class="btn btn-dark btn-block" id="submitBtn">Save Changes</button>
+            </form>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
