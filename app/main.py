@@ -10,7 +10,7 @@ from sqlalchemy.exc import OperationalError, SQLAlchemyError
 import app.models  # noqa: F401  (registers all tables on Base.metadata)
 from app.core.config import settings
 from app.database import Base, SessionLocal, check_db_connection, engine
-from app.routers import admin, auth, pages, users
+from app.routers import about, auth, contact, maintenance, pages, placeholders, users
 from app.seed import seed_initial_data
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -42,7 +42,17 @@ app.add_middleware(
 )
 
 # Routers
-for r in (auth.router, users.router, pages.router, admin.router):
+for r in (
+    auth.router,
+    users.router,
+    pages.router,
+    maintenance.router,
+    contact.router,
+    about.router,
+    placeholders.plants_router,
+    placeholders.rent_router,
+    placeholders.buy_router,
+):
     app.include_router(r, prefix=settings.API_V1_PREFIX)
 
 
