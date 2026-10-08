@@ -1,0 +1,82 @@
+/* Extra styles for the shared dashboard layout.
+   Uses the CSS variables already defined in style.css. */
+
+/* ---- User card at the top of the sidebar (now a link to the profile) ---- */
+a.user-chip {
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+a.user-chip:hover { background: var(--bg); text-decoration: none; }
+a.user-chip.active { background: var(--green-100); border-color: var(--green-700); }
+
+/* ---- Menu links that are not built yet ---- */
+.nav-link.disabled { color: var(--muted); cursor: not-allowed; opacity: 0.75; }
+.nav-link.disabled:hover { background: none; }
+.soon-tag {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--muted);
+}
+
+/* ---- Menu loading skeleton ---- */
+.nav-skeleton {
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--bg) 25%, #e8eee9 50%, var(--bg) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+.nav-note { color: var(--muted); font-size: 13px; padding: 8px 14px; }
+
+/* ---- Empty / "coming soon" state card ---- */
+.state-box { text-align: center; padding: 56px 24px; }
+.state-icon { font-size: 44px; margin-bottom: 12px; }
+.state-box h2 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+.state-box p { color: var(--muted); max-width: 440px; margin: 10px auto 0; }
+.badge.dev { background: var(--warn-bg); color: var(--warn); }
+
+/* ---- Small helper for intro text under a page title ---- */
+.page-intro { color: var(--muted); margin-bottom: 20px; }
+/* ---------- About page ---------- */
+.about-text { color: var(--text); line-height: 1.7; }
+.section-gap { margin-top: 24px; }
+
+.feature-list { list-style: none; display: grid; gap: 12px; }
+.feature-list li { display: flex; align-items: flex-start; gap: 12px; }
+.feature-list li::before {
+  content: "✓";
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--green-100);
+  color: var(--green-900);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------- Contact page ---------- */
+textarea {
+  width: 100%;
+  min-height: 150px;
+  padding: 12px 14px;
+  font: inherit;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  resize: vertical;
+}
+textarea:focus { outline: 2px solid var(--green-100); border-color: var(--green-700); }
+
+.char-count { text-align: right; margin-top: 4px; font-size: 12.5px; color: var(--muted); }
+.char-count.limit { color: var(--danger); }

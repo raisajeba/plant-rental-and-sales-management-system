@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Maintenance | Green Forest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body data-page="maintenance" data-layout="dashboard">
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+
+    <div class="main">
+      <header class="topbar"><h1>Maintenance</h1></header>
+
+      <div class="content">
+        <p class="page-intro">Track when and how to look after your plants, and ask for help when you need it.</p>
+
+        <div id="message" class="alert hidden"></div>
+
+        <!-- Summary cards -->
+        <div class="stats">
+          <div class="card stat-card"><div class="stat-value" id="statPending">-</div><div class="stat-label">Pending tasks</div></div>
+          <div class="card stat-card"><div class="stat-value" id="statOverdue">-</div><div class="stat-label">Overdue</div></div>
+          <div class="card stat-card"><div class="stat-value" id="statCompleted">-</div><div class="stat-label">Completed</div></div>
+          <div class="card stat-card"><div class="stat-value" id="statRequests">-</div><div class="stat-label">Open requests</div></div>
+        </div>
+
+        <!-- Care schedule table -->
+        <section class="card">
+          <div class="card-head">
+            <h3>My Care Schedule</h3>
+            <select id="statusFilter" class="inline-select" aria-label="Filter tasks">
+              <option value="all">All tasks</option>
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Plant</th>
+                  <th>Task</th>
+                  <th>Due date</th>
+                  <th>How to maintain</th>
+                  <th>Repeat</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="scheduleBody">
+                <tr class="empty-row"><td colspan="7">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Forms -->
+        <div class="grid-2 section-gap">
+          <section class="card">
+            <h3>Add a Care Task</h3>
+            <form id="taskForm" novalidate>
+              <div class="form-group">
+                <label for="plantName">Plant name</label>
+                <input type="text" id="plantName" maxlength="100" placeholder="e.g. Areca Palm" required />
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="taskType">Task</label>
+                  <select id="taskType">
+                    <option value="watering">Watering</option>
+                    <option value="fertilizing">Fertilizing</option>
+                    <option value="pruning">Pruning</option>
+                    <option value="repotting">Repotting</option>
+                    <option value="pest_control">Pest control</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="dueDate">Due date</label>
+                  <input type="date" id="dueDate" required />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="frequency">Repeat every (days, optional)</label>
+                <input type="number" id="frequency" min="1" max="365" step="1" placeholder="Leave empty for a one-time task" />
+              </div>
+
+              <div class="form-group">
+                <label for="instructions">How to maintain (optional)</label>
+                <textarea id="instructions" class="compact" maxlength="1000" placeholder="Leave empty to use the default care tip"></textarea>
+                <div class="tip-box" id="tipBox">Loading care tip...</div>
+              </div>
+
+              <button type="submit" class="btn btn-dark btn-block" id="taskSubmitBtn">Add Task</button>
+            </form>
+          </section>
+
+          <section class="card">
+            <h3>Request Maintenance Help</h3>
+            <form id="requestForm" novalidate>
+              <div class="form-group">
+                <label for="requestPlant">Plant name (optional)</label>
+                <input type="text" id="requestPlant" maxlength="100" placeholder="Leave empty if it is a general question" />
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="requestType">What do you need help with?</label>
+                  <select id="requestType">
+                    <option value="watering">Watering</option>
+                    <option value="fertilizing">Fertilizing</option>
+                    <option value="pruning">Pruning</option>
+                    <option value="repotting">Repotting</option>
+                    <option value="pest_control">Pest control</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="preferredDate">Preferred date (optional)</label>
+                  <input type="date" id="preferredDate" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="requestDescription">Describe the problem</label>
+                <textarea id="requestDescription" class="compact" maxlength="1000" placeholder="e.g. The leaves are turning yellow at the edges (at least 10 characters)" required></textarea>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-block" id="requestSubmitBtn">Submit Request</button>
+            </form>
+          </section>
+        </div>
+
+        <!-- My requests table -->
+        <section class="card section-gap">
+          <div class="card-head"><h3>My Requests</h3></div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Request</th>
+                  <th>Details</th>
+                  <th>Preferred date</th>
+                  <th>Status</th>
+                  <th>Submitted</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="requestBody">
+                <tr class="empty-row"><td colspan="6">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/pages/maintenance.js"></script>
+</body>
+</html>

@@ -18,7 +18,9 @@ class User(TimestampMixin, Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     # Stores the bcrypt HASH only, never the plain password.
     password: Mapped[str] = mapped_column(String(255), nullable=False)
-
+    profile_image: Mapped[str | None] = mapped_column(
+    String(500), nullable=True
+    )
     # RESTRICT: a role that still has users cannot be deleted.
     role_id: Mapped[int] = mapped_column(
         ForeignKey("roles.id", ondelete="RESTRICT", onupdate="CASCADE"),
