@@ -188,6 +188,97 @@ def test_existing_cart_quantity_cannot_be_incremented_past_stock(cart_api):
     assert cart.json()[0]["quantity"] == 2
 
 
+def test_update_cart_quantity_increases_and_recalculates_total(cart_api):
+    client, _, plant_ids, _ = cart_api
+    added = client.post(
+        "/api/v1/cart/items",
+        json={"plant_id": plant_ids["Golden Pothos"], "quantity": 2},
+    )
+
+    response = client.patch(
+        f"/api/v1/cart/items/{added.json()['id']}",
+        json={"quantity": 4},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["quantity"] == 4
+    assert response.json()["total_amount"] == 60
+
+
+def test_update_cart_quantity_decreases_and_recalculates_total(cart_api):
+    client, _, plant_ids, _ = cart_api
+    added = client.post(
+        "/api/v1/cart/items",
+        json={"plant_id": plant_ids["Golden Pothos"], "quantity": 4},
+    )
+
+    response = client.patch(
+        f"/api/v1/cart/items/{added.json()['id']}",
+        json={"quantity": 2},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["quantity"] == 2
+    assert response.json()["total_amount"] == 30
+    cart = client.get("/api/v1/cart/items")
+    assert cart.json()[0]["quantity"] == 2
+    assert cart.json()[0]["total_amount"] == 30
+
+
+def test_update_cart_quantity_cannot_exceed_current_stock(cart_api):
+    client, _, plant_ids, testing_session = cart_api
+    added = client.post(
+        "/api/v1/cart/items",
+        json={"plant_id": plant_ids["Silver Pothos"], "quantity": 2},
+    )
+    with testing_session() as session:
+        session.get(Plant, plant_ids["Silver Pothos"]).available_quantity = 2
+        session.commit()
+
+    response = client.patch(
+        f"/api/v1/cart/items/{added.json()['id']}",
+        json={"quantity": 3},
+    )
+
+    assert response.status_code == 409
+    cart = client.get("/api/v1/cart/items")
+    assert cart.json()[0]["quantity"] == 2
+
+
+def test_update_cart_quantity_must_remain_at_least_one(cart_api):
+    client, _, plant_ids, _ = cart_api
+    added = client.post(
+        "/api/v1/cart/items",
+        json={"plant_id": plant_ids["Golden Pothos"], "quantity": 1},
+    )
+
+    response = client.patch(
+        f"/api/v1/cart/items/{added.json()['id']}",
+        json={"quantity": 0},
+    )
+
+    assert response.status_code == 422
+    cart = client.get("/api/v1/cart/items")
+    assert cart.json()[0]["quantity"] == 1
+
+
+def test_user_cannot_update_another_users_cart_item(cart_api):
+    client, current_user_id, plant_ids, _ = cart_api
+    added = client.post(
+        "/api/v1/cart/items",
+        json={"plant_id": plant_ids["Golden Pothos"], "quantity": 1},
+    )
+    current_user_id["value"] = 22
+
+    response = client.patch(
+        f"/api/v1/cart/items/{added.json()['id']}",
+        json={"quantity": 2},
+    )
+
+    assert response.status_code == 404
+    assert client.get("/api/v1/cart/items").json() == []
+
+
 @pytest.mark.parametrize(
     ("plant_name", "detail"),
     [
