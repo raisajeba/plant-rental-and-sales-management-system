@@ -4,6 +4,8 @@
   const form = document.getElementById("plantFilters");
   const results = document.getElementById("plantResults");
   const summary = document.getElementById("resultSummary");
+  const cartItems = document.getElementById("cartItems");
+  const cartSummary = document.getElementById("cartSummary");
   const previousButton = document.getElementById("previousPage");
   const nextButton = document.getElementById("nextPage");
   const pageSize = 20;
@@ -53,7 +55,94 @@
       availability.textContent = plant.availability_status.replaceAll("_", " ");
 
       card.append(name, category, size, nursery, prices, stock, availability);
+
+      const cartForm = document.createElement("form");
+      cartForm.className = "plant-cart-form";
+      const quantityGroup = document.createElement("div");
+      quantityGroup.className = "form-group";
+      const quantityLabel = document.createElement("label");
+      quantityLabel.textContent = "Quantity";
+      quantityLabel.htmlFor = `cart-quantity-${plant.id}`;
+      const quantityInput = document.createElement("input");
+      quantityInput.id = `cart-quantity-${plant.id}`;
+      quantityInput.type = "number";
+      quantityInput.min = "1";
+      quantityInput.max = String(Math.max(plant.available_quantity, 1));
+      quantityInput.value = "1";
+      quantityInput.required = true;
+      quantityGroup.append(quantityLabel, quantityInput);
+
+      const addButton = document.createElement("button");
+      addButton.className = "btn btn-primary";
+      addButton.type = "submit";
+      const canBuy = (
+        plant.availability_status === "available_for_sale" ||
+        plant.availability_status === "available_for_both"
+      ) && plant.available_quantity > 0 && plant.buy_price !== null;
+      addButton.textContent = canBuy ? "Add to cart" : "Not available for sale";
+      addButton.disabled = !canBuy;
+
+      cartForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        addButton.disabled = true;
+        try {
+          await apiRequest("/cart/items", {
+            method: "POST",
+            body: {
+              plant_id: plant.id,
+              quantity: Number(quantityInput.value),
+            },
+            auth: true,
+          });
+          showMessage(`${plant.name} added to your cart.`, "success");
+          await loadCart();
+        } catch (error) {
+          showMessage(error.message);
+        } finally {
+          addButton.disabled = !canBuy;
+        }
+      });
+
+      cartForm.append(quantityGroup, addButton);
+      card.append(cartForm);
       results.append(card);
+    }
+  }
+
+  function renderCart(items) {
+    cartItems.replaceChildren();
+    const totalQuantity = items.reduce((total, item) => total + item.quantity, 0);
+    cartSummary.textContent = `${totalQuantity} item${totalQuantity === 1 ? "" : "s"}`;
+
+    if (items.length === 0) {
+      const emptyState = document.createElement("p");
+      emptyState.className = "plant-empty";
+      emptyState.textContent = "Your cart is empty.";
+      cartItems.append(emptyState);
+      return;
+    }
+
+    for (const item of items) {
+      const card = document.createElement("article");
+      card.className = "card plant-result-card";
+      const name = document.createElement("h3");
+      name.textContent = item.plant.name;
+      const quantity = document.createElement("p");
+      quantity.textContent = `Quantity: ${item.quantity}`;
+      const price = document.createElement("p");
+      price.textContent = `Unit sale price: ${item.plant.buy_price}`;
+      card.append(name, quantity, price);
+      cartItems.append(card);
+    }
+  }
+
+  async function loadCart() {
+    try {
+      renderCart(await apiRequest("/cart/items", { auth: true }));
+    } catch (error) {
+      cartItems.replaceChildren();
+      cartSummary.textContent = "";
+      showMessage(error.message);
     }
   }
 
@@ -118,4 +207,5 @@
   });
 
   loadPlants();
+  loadCart();
 })();

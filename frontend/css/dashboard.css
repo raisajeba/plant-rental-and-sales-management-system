@@ -60,7 +60,7 @@ a.user-chip.active { background: var(--green-100); border-color: var(--green-700
 }
 .btn-reset { background: var(--bg); color: var(--text); }
 .btn-reset:hover { background: var(--border); }
-.plant-results { margin-top: 26px; }
+.plant-results, .plant-cart { margin-top: 26px; }
 .plant-results-header {
   display: flex;
   align-items: baseline;
@@ -73,6 +73,9 @@ a.user-chip.active { background: var(--green-100); border-color: var(--green-700
 .plant-result-card p { margin-top: 6px; }
 .plant-result-card .badge { margin-top: 10px; }
 .plant-empty { grid-column: 1 / -1; color: var(--muted); padding: 24px 0; }
+.plant-cart-form { display: flex; align-items: flex-end; gap: 10px; margin-top: 14px; }
+.plant-cart-form .form-group { flex: 1; margin-bottom: 0; }
+.plant-cart-form input { max-width: 120px; }
 
 /* ---------- About page ---------- */
 .about-text { color: var(--text); line-height: 1.7; }
