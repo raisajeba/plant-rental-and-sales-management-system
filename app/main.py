@@ -12,7 +12,7 @@ from sqlalchemy.exc import OperationalError, SQLAlchemyError
 import app.models  # noqa: F401
 from app.core.config import settings
 from app.database import Base, SessionLocal, check_db_connection, engine
-from app.routers import about, auth, contact, maintenance, nurseries, pages, placeholders, plants, users
+from app.routers import about, auth, contact, maintenance, nurseries, order, pages, placeholders, plants, users
 from app.seed import seed_initial_data
 
 logging.basicConfig(
@@ -84,6 +84,7 @@ for r in (
     users.router,
     nurseries.router,  # Added here
     plants.router,     # Added here
+    order.router,      # Added order router
     pages.router,
     maintenance.router,
     contact.router,

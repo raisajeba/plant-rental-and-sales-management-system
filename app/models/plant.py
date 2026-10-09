@@ -13,6 +13,7 @@ class Plant(TimestampMixin, Base):
             "name",
             name="uq_plants_nursery_name",
         ),
+        {'extend_existing': True}
     )
 
     id: Mapped[int] = mapped_column(
