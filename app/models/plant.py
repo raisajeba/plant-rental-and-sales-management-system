@@ -1,28 +1,81 @@
-import enum
-from sqlalchemy import Column, Integer, String, Enum, CheckConstraint
-from sqlalchemy.orm import declarative_base
+from sqlalchemy import ForeignKey, Integer, String, Text, Numeric, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-Base = declarative_base()
+from app.database import Base
+from app.models.mixins import TimestampMixin
 
-class AvailabilityStatus(str, enum.Enum):
-    AVAILABLE = "Available"
-    OUT_OF_STOCK = "Out of Stock"
 
-class Plant(Base):
+class Plant(TimestampMixin, Base):
     __tablename__ = "plants"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False)
-    quantity = Column(Integer, nullable=False, default=0)
-    availability_status = Column(Enum(AvailabilityStatus), nullable=False, default=AvailabilityStatus.OUT_OF_STOCK)
-
     __table_args__ = (
-        CheckConstraint('quantity >= 0', name='check_quantity_non_negative'),
+        UniqueConstraint(
+            "nursery_id",
+            "name",
+            name="uq_plants_nursery_name",
+        ),
     )
 
-    def update_availability_status(self):
-        """Automatically sync availability status based on stock quantity."""
-        if self.quantity > 0:
-            self.availability_status = AvailabilityStatus.AVAILABLE
-        else:
-            self.availability_status = AvailabilityStatus.OUT_OF_STOCK
+    id: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True
+    )
+
+    nursery_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "nurseries.id",
+            ondelete="RESTRICT",
+            onupdate="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+
+    name: Mapped[str] = mapped_column(
+        String(150), nullable=False
+    )
+
+    category: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )
+
+    size: Mapped[str | None] = mapped_column(
+        String(50), nullable=True
+    )
+
+    description: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )
+
+    buy_price: Mapped[float | None] = mapped_column(
+        Numeric(10, 2), nullable=True
+    )
+
+    rent_price: Mapped[float | None] = mapped_column(
+        Numeric(10, 2), nullable=True
+    )
+
+    available_quantity: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
+
+    availability_status: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="unavailable",
+        server_default="unavailable",
+    )
+
+    care_instructions: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )
+
+    image_url: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+
+    nursery = relationship(
+        "Nursery",
+        back_populates="plants",
+    )

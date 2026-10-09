@@ -1,9 +1,17 @@
+
 """Pydantic schemas: request validation and safe (no password) responses."""
 import re
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from app.core.constants import UserStatus
 
@@ -12,6 +20,7 @@ class RoleOut(BaseModel):
     id: int
     role_name: str
     status: str
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -21,6 +30,7 @@ class PageOut(BaseModel):
     page_url: str
     description: str | None = None
     status: str
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -99,6 +109,12 @@ class UserOut(BaseModel):
     email: EmailStr
     status: str
     role: RoleOut
+
+    # Profile picture URL/path
+    profile_image: str | None = None
+
     created_at: datetime
     updated_at: datetime
+
     model_config = ConfigDict(from_attributes=True)
+
