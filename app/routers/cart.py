@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
@@ -160,3 +160,26 @@ def update_cart_item_quantity(
     db.commit()
     db.refresh(cart_item)
     return cart_item
+
+
+@router.delete(
+    "/items/{cart_item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def remove_cart_item(
+    cart_item_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    cart_item = db.scalar(
+        select(CartItem).where(
+            CartItem.id == cart_item_id,
+            CartItem.user_id == user.id,
+        )
+    )
+    if cart_item is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Cart item not found")
+
+    db.delete(cart_item)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

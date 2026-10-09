@@ -279,6 +279,68 @@ def test_user_cannot_update_another_users_cart_item(cart_api):
     assert client.get("/api/v1/cart/items").json() == []
 
 
+def test_remove_cart_item_deletes_only_the_selected_item(cart_api):
+    client, _, plant_ids, testing_session = cart_api
+    first = client.post(
+        "/api/v1/cart/items",
+        json={"plant_id": plant_ids["Golden Pothos"], "quantity": 2},
+    )
+    second = client.post(
+        "/api/v1/cart/items",
+        json={"plant_id": plant_ids["Silver Pothos"], "quantity": 1},
+    )
+
+    response = client.delete(f"/api/v1/cart/items/{first.json()['id']}")
+    cart = client.get("/api/v1/cart/items")
+
+    assert response.status_code == 204
+    assert response.content == b""
+    assert [item["id"] for item in cart.json()] == [second.json()["id"]]
+    assert cart.json()[0]["plant"]["name"] == "Silver Pothos"
+    assert cart.json()[0]["total_amount"] == 8
+    with testing_session() as session:
+        assert session.get(CartItem, first.json()["id"]) is None
+        assert session.get(CartItem, second.json()["id"]) is not None
+
+
+def test_removing_last_cart_item_returns_empty_cart(cart_api):
+    client, _, plant_ids, _ = cart_api
+    added = client.post(
+        "/api/v1/cart/items",
+        json={"plant_id": plant_ids["Golden Pothos"], "quantity": 1},
+    )
+
+    response = client.delete(f"/api/v1/cart/items/{added.json()['id']}")
+    cart = client.get("/api/v1/cart/items")
+
+    assert response.status_code == 204
+    assert cart.status_code == 200
+    assert cart.json() == []
+
+
+def test_user_cannot_remove_another_users_cart_item(cart_api):
+    client, current_user_id, plant_ids, testing_session = cart_api
+    added = client.post(
+        "/api/v1/cart/items",
+        json={"plant_id": plant_ids["Golden Pothos"], "quantity": 1},
+    )
+    current_user_id["value"] = 22
+
+    response = client.delete(f"/api/v1/cart/items/{added.json()['id']}")
+
+    assert response.status_code == 404
+    with testing_session() as session:
+        assert session.get(CartItem, added.json()["id"]) is not None
+
+
+def test_remove_unknown_cart_item_returns_not_found(cart_api):
+    client, _, _, _ = cart_api
+
+    response = client.delete("/api/v1/cart/items/9999")
+
+    assert response.status_code == 404
+
+
 @pytest.mark.parametrize(
     ("plant_name", "detail"),
     [
