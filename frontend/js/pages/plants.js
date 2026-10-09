@@ -170,7 +170,26 @@
         quantityControls.append(button);
       }
 
-      card.append(name, quantity, price, lineTotal, quantityControls);
+      const removeButton = document.createElement("button");
+      removeButton.className = "btn btn-reset";
+      removeButton.type = "button";
+      removeButton.textContent = "Remove";
+      removeButton.addEventListener("click", async () => {
+        removeButton.disabled = true;
+        try {
+          await apiRequest(`/cart/items/${item.id}`, {
+            method: "DELETE",
+            auth: true,
+          });
+          showMessage(`${item.plant.name} removed from your cart.`, "success");
+          await loadCart();
+        } catch (error) {
+          showMessage(error.message);
+          removeButton.disabled = false;
+        }
+      });
+
+      card.append(name, quantity, price, lineTotal, quantityControls, removeButton);
       cartItems.append(card);
     }
 
