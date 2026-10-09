@@ -43,6 +43,37 @@ a.user-chip.active { background: var(--green-100); border-color: var(--green-700
 
 /* ---- Small helper for intro text under a page title ---- */
 .page-intro { color: var(--muted); margin-bottom: 20px; }
+
+/* ---------- Plant listings and filters ---------- */
+.plant-filters h2, .plant-results h2 { font-size: 20px; margin-bottom: 18px; }
+.plant-filter-grid, .plant-result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+}
+.plant-filters .form-group { margin-bottom: 0; }
+.plant-filter-actions, .plant-pagination {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+.btn-reset { background: var(--bg); color: var(--text); }
+.btn-reset:hover { background: var(--border); }
+.plant-results { margin-top: 26px; }
+.plant-results-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+.plant-results-header p { color: var(--muted); }
+.plant-result-card { padding: 20px; }
+.plant-result-card h3 { margin-bottom: 6px; }
+.plant-result-card p { margin-top: 6px; }
+.plant-result-card .badge { margin-top: 10px; }
+.plant-empty { grid-column: 1 / -1; color: var(--muted); padding: 24px 0; }
+
 /* ---------- About page ---------- */
 .about-text { color: var(--text); line-height: 1.7; }
 .section-gap { margin-top: 24px; }
@@ -80,3 +111,7 @@ textarea:focus { outline: 2px solid var(--green-100); border-color: var(--green-
 
 .char-count { text-align: right; margin-top: 4px; font-size: 12.5px; color: var(--muted); }
 .char-count.limit { color: var(--danger); }
+
+@media (max-width: 860px) {
+  .plant-results-header { align-items: flex-start; flex-direction: column; gap: 0; }
+}

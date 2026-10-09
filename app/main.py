@@ -88,7 +88,6 @@ for r in (
     maintenance.router,
     contact.router,
     about.router,
-    placeholders.plants_router,
     placeholders.rent_router,
     placeholders.buy_router,
 ):

@@ -63,6 +63,8 @@ def client():
                     nursery_id=active.id,
                     name="Golden Pothos",
                     category="Indoor",
+                    size="Medium",
+                    buy_price=15,
                     available_quantity=5,
                     availability_status=AvailabilityStatus.FOR_SALE.value,
                 ),
@@ -70,6 +72,9 @@ def client():
                     nursery_id=active.id,
                     name="Silver Pothos",
                     category="Indoor",
+                    size="Small",
+                    buy_price=8,
+                    rent_price=4,
                     available_quantity=2,
                     availability_status=AvailabilityStatus.FOR_BOTH.value,
                 ),
@@ -77,6 +82,8 @@ def client():
                     nursery_id=active.id,
                     name="Garden Rose",
                     category="Outdoor",
+                    size="Large",
+                    rent_price=12,
                     available_quantity=4,
                     availability_status=AvailabilityStatus.FOR_RENT.value,
                 ),
@@ -84,6 +91,8 @@ def client():
                     nursery_id=active.id,
                     name="Unavailable Fern",
                     category="Indoor",
+                    size="Small",
+                    buy_price=7,
                     available_quantity=0,
                     availability_status=AvailabilityStatus.UNAVAILABLE.value,
                 ),
@@ -91,6 +100,8 @@ def client():
                     nursery_id=inactive.id,
                     name="Closed Nursery Pothos",
                     category="Indoor",
+                    size="Medium",
+                    buy_price=15,
                     available_quantity=5,
                     availability_status=AvailabilityStatus.FOR_SALE.value,
                 ),
@@ -210,3 +221,123 @@ def test_search_paginates_results(client):
 
     assert response.status_code == 200
     assert [plant["name"] for plant in response.json()] == ["Silver Pothos"]
+
+
+def test_plant_listing_filters_by_indoor_or_outdoor_type(client):
+    test_client, _ = client
+
+    response = test_client.get(
+        "/api/v1/plants",
+        params={"plant_type": "Outdoor"},
+    )
+
+    assert response.status_code == 200
+    assert [plant["name"] for plant in response.json()] == ["Garden Rose"]
+
+
+def test_plant_listing_filters_by_size_and_category(client):
+    test_client, _ = client
+
+    response = test_client.get(
+        "/api/v1/plants",
+        params={"size": "small", "category": "Indoor"},
+    )
+
+    assert response.status_code == 200
+    assert [plant["name"] for plant in response.json()] == [
+        "Silver Pothos",
+        "Unavailable Fern",
+    ]
+
+
+def test_plant_listing_filters_price_by_sale_or_rental_price(client):
+    test_client, _ = client
+
+    response = test_client.get(
+        "/api/v1/plants",
+        params={"min_price": 5, "max_price": 10},
+    )
+
+    assert response.status_code == 200
+    assert [plant["name"] for plant in response.json()] == [
+        "Silver Pothos",
+        "Unavailable Fern",
+    ]
+
+
+def test_plant_listing_filters_by_availability(client):
+    test_client, _ = client
+
+    response = test_client.get(
+        "/api/v1/plants",
+        params={"availability": "unavailable"},
+    )
+
+    assert response.status_code == 200
+    assert [plant["name"] for plant in response.json()] == ["Unavailable Fern"]
+
+
+def test_plant_listing_combines_all_filters(client):
+    test_client, _ = client
+
+    response = test_client.get(
+        "/api/v1/plants",
+        params={
+            "plant_type": "Indoor",
+            "size": "medium",
+            "min_price": 10,
+            "max_price": 20,
+            "availability": "available_for_sale",
+            "category": "Indoor",
+        },
+    )
+
+    assert response.status_code == 200
+    assert [plant["name"] for plant in response.json()] == ["Golden Pothos"]
+
+
+def test_clearing_filters_restores_default_active_nursery_listing(client):
+    test_client, _ = client
+
+    filtered = test_client.get(
+        "/api/v1/plants",
+        params={"plant_type": "Outdoor"},
+    )
+    reset = test_client.get("/api/v1/plants")
+
+    assert [plant["name"] for plant in filtered.json()] == ["Garden Rose"]
+    assert [plant["name"] for plant in reset.json()] == [
+        "Garden Rose",
+        "Golden Pothos",
+        "Silver Pothos",
+        "Unavailable Fern",
+    ]
+
+
+def test_invalid_price_range_is_rejected(client):
+    test_client, _ = client
+
+    response = test_client.get(
+        "/api/v1/plants",
+        params={"min_price": 20, "max_price": 10},
+    )
+
+    assert response.status_code == 422
+
+
+def test_filtering_does_not_modify_plant_data(client):
+    test_client, _ = client
+
+    filtered = test_client.get(
+        "/api/v1/plants",
+        params={"availability": "available_for_both"},
+    )
+    reset = test_client.get("/api/v1/plants")
+
+    assert filtered.status_code == 200
+    silver_pothos = next(
+        plant for plant in reset.json() if plant["name"] == "Silver Pothos"
+    )
+    assert silver_pothos["available_quantity"] == 2
+    assert silver_pothos["buy_price"] == 8
+    assert silver_pothos["rent_price"] == 4
