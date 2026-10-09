@@ -52,8 +52,8 @@ class AvailabilityStatus(str, Enum):
 # The page_url values must match MENU_ROUTES in the frontend js/layout.js.
 MENU_PAGES: list[tuple[str, str, str]] = [
     ("Plants", "/plants", "Plant list (coming soon)"),
-    ("Rent", "/rent-plants", "Rent plants (coming soon)"),
-    ("Buy", "/buy-plants", "Buy plants (coming soon)"),
+    ("Rent", "/rent", "Rent plants (coming soon)"),
+    ("Buy", "/buy", "Buy plants (coming soon)"),
     ("Maintenance", "/maintenance", "Care schedule and maintenance requests"),
     ("Contact Us", "/contact", "Send us a message"),
     ("About Us", "/about", "About Green Forest"),

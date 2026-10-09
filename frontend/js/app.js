@@ -5,11 +5,14 @@
    ========================================================= */
 
 // Backend API
-const API_BASE = "http://127.0.0.1:8000/api/v1";
+const API_BASE = (
+  window.GRENNEST_API_URL ||
+  `${window.location.protocol}//${window.location.hostname || "127.0.0.1"}:8000/api/v1`
+).replace(/\/$/, "");
 const TOKEN_KEY = "greennest_token";
 
 // Full backend URL for uploaded files
-const API_ORIGIN = "http://127.0.0.1:8000";
+const API_ORIGIN = new URL(API_BASE, window.location.href).origin;
 
 
 /* ---------- Token helpers ---------- */

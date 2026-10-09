@@ -37,3 +37,4 @@ class User(TimestampMixin, Base):
 
     # Loaded together with the user because RBAC checks need it on every request.
     role = relationship("Role", back_populates="users", lazy="joined")
+    purchase_orders = relationship("PurchaseOrder", back_populates="user")
