@@ -113,12 +113,19 @@
     cartItems.replaceChildren();
     const totalQuantity = items.reduce((total, item) => total + item.quantity, 0);
     cartSummary.textContent = `${totalQuantity} item${totalQuantity === 1 ? "" : "s"}`;
+    const totalAmount = items.reduce(
+      (total, item) => total + Number(item.total_amount),
+      0
+    );
+    const total = document.createElement("p");
+    total.className = "plant-cart-total";
+    total.textContent = `Cart total: ${totalAmount.toFixed(2)}`;
 
     if (items.length === 0) {
       const emptyState = document.createElement("p");
       emptyState.className = "plant-empty";
       emptyState.textContent = "Your cart is empty.";
-      cartItems.append(emptyState);
+      cartItems.append(emptyState, total);
       return;
     }
 
@@ -130,10 +137,44 @@
       const quantity = document.createElement("p");
       quantity.textContent = `Quantity: ${item.quantity}`;
       const price = document.createElement("p");
-      price.textContent = `Unit sale price: ${item.plant.buy_price}`;
-      card.append(name, quantity, price);
+      price.textContent = `Unit sale price: ${Number(item.plant.buy_price).toFixed(2)}`;
+      const lineTotal = document.createElement("p");
+      lineTotal.textContent = `Item total: ${Number(item.total_amount).toFixed(2)}`;
+
+      const quantityControls = document.createElement("div");
+      quantityControls.className = "plant-cart-form";
+      for (const [label, nextQuantity] of [
+        ["Decrease quantity", item.quantity - 1],
+        ["Increase quantity", item.quantity + 1],
+      ]) {
+        const button = document.createElement("button");
+        button.className = "btn btn-reset";
+        button.type = "button";
+        button.textContent = label === "Decrease quantity" ? "−" : "+";
+        button.setAttribute("aria-label", label);
+        button.disabled = nextQuantity < 1 || nextQuantity > item.plant.available_quantity;
+        button.addEventListener("click", async () => {
+          button.disabled = true;
+          try {
+            await apiRequest(`/cart/items/${item.id}`, {
+              method: "PATCH",
+              body: { quantity: nextQuantity },
+              auth: true,
+            });
+            await loadCart();
+          } catch (error) {
+            showMessage(error.message);
+            button.disabled = false;
+          }
+        });
+        quantityControls.append(button);
+      }
+
+      card.append(name, quantity, price, lineTotal, quantityControls);
       cartItems.append(card);
     }
+
+    cartItems.append(total);
   }
 
   async function loadCart() {

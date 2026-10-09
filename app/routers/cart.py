@@ -7,7 +7,7 @@ from app.core.constants import AvailabilityStatus
 from app.database import get_db
 from app.dependencies.auth import get_current_user
 from app.models import CartItem, Plant, User
-from app.schemas.cart import CartItemCreate, CartItemOut
+from app.schemas.cart import CartItemCreate, CartItemOut, CartItemUpdate
 
 router = APIRouter(prefix="/cart", tags=["Cart"])
 
@@ -105,5 +105,58 @@ def add_cart_item(
             "The cart item could not be updated because it changed concurrently. Please retry.",
         ) from exc
 
+    db.refresh(cart_item)
+    return cart_item
+
+
+@router.patch("/items/{cart_item_id}", response_model=CartItemOut)
+def update_cart_item_quantity(
+    cart_item_id: int,
+    payload: CartItemUpdate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    cart_item = db.scalar(
+        select(CartItem)
+        .where(CartItem.id == cart_item_id, CartItem.user_id == user.id)
+    )
+    if cart_item is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Cart item not found")
+
+    plant = db.scalar(
+        select(Plant)
+        .where(Plant.id == cart_item.plant_id)
+        .with_for_update()
+    )
+    if plant is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant not found")
+    if plant.nursery.status != "active" or plant.availability_status not in _SALE_STATUSES:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "This plant is not currently available for sale.",
+        )
+    if plant.buy_price is None:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "This plant is not currently available for sale.",
+        )
+    cart_item = db.scalar(
+        select(CartItem)
+        .where(CartItem.id == cart_item_id, CartItem.user_id == user.id)
+        .with_for_update()
+    )
+    if cart_item is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Cart item not found")
+    if payload.quantity > plant.available_quantity:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            (
+                f"Requested cart quantity ({payload.quantity}) exceeds "
+                f"available stock ({plant.available_quantity})."
+            ),
+        )
+
+    cart_item.quantity = payload.quantity
+    db.commit()
     db.refresh(cart_item)
     return cart_item
