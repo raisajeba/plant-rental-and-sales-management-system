@@ -4,6 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from pydantic import EmailStr, TypeAdapter, ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -26,6 +27,8 @@ ALLOWED_CONTENT_TYPES = {
     "image/png": ".png",
     "image/webp": ".webp",
 }
+MAX_PROFILE_IMAGE_SIZE = 5 * 1024 * 1024
+EMAIL_ADAPTER = TypeAdapter(EmailStr)
 
 
 @router.get("/me", response_model=UserOut)
@@ -50,9 +53,7 @@ async def update_my_profile(
     Role and status cannot be changed here.
     """
 
-    # -----------------------------------------
-    # Update email
-    # -----------------------------------------
+    # Validate every supplied field before mutating the user or writing an image.
     if email is not None:
         email = email.strip()
 
@@ -62,6 +63,48 @@ async def update_my_profile(
                 detail="Email cannot be empty",
             )
 
+        try:
+            email = str(EMAIL_ADAPTER.validate_python(email))
+        except ValidationError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Enter a valid email address",
+            )
+
+    if name is not None:
+        name = name.strip()
+
+        if len(name) < 2:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Name must be at least 2 characters",
+            )
+
+        if len(name) > 100:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Name must not exceed 100 characters",
+            )
+
+    file_data = None
+    if profile_image is not None:
+        if profile_image.content_type not in ALLOWED_CONTENT_TYPES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only JPG, PNG and WEBP images are allowed",
+            )
+
+        file_data = await profile_image.read(MAX_PROFILE_IMAGE_SIZE + 1)
+        if len(file_data) > MAX_PROFILE_IMAGE_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Profile picture must not exceed 5 MiB",
+            )
+
+    # -----------------------------------------
+    # Update email
+    # -----------------------------------------
+    if email is not None:
         if email != current_user.email:
             taken = db.scalar(
                 select(User.id).where(
@@ -82,46 +125,12 @@ async def update_my_profile(
     # Update name
     # -----------------------------------------
     if name is not None:
-        name = name.strip()
-
-        if len(name) < 2:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Name must be at least 2 characters",
-            )
-
-        if len(name) > 100:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Name must not exceed 100 characters",
-            )
-
         current_user.name = name
 
     # -----------------------------------------
     # Update profile picture
     # -----------------------------------------
     if profile_image is not None:
-
-        # Check file type
-        if profile_image.content_type not in ALLOWED_CONTENT_TYPES:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only JPG, PNG and WEBP images are allowed",
-            )
-
-        # Read the uploaded file
-        file_data = await profile_image.read()
-
-        # Maximum size: 5 MB
-        max_size = 5 * 1024 * 1024
-
-        if len(file_data) > max_size:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Profile picture must be smaller than 5 MB",
-            )
-
         # Delete old profile picture if one exists
         if current_user.profile_image:
             old_file = Path(current_user.profile_image.lstrip("/"))

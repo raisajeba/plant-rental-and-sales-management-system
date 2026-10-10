@@ -12,7 +12,18 @@ from sqlalchemy.exc import OperationalError, SQLAlchemyError
 import app.models  # noqa: F401
 from app.core.config import settings
 from app.database import Base, SessionLocal, check_db_connection, engine
-from app.routers import about, auth, contact, maintenance, nurseries, order, pages, placeholders, plants, users
+from app.routers import (
+    about,
+    auth,
+    cart,
+    contact,
+    maintenance,
+    nurseries,
+    pages,
+    placeholders,
+    plants,
+    users,
+)
 from app.seed import seed_initial_data
 
 logging.basicConfig(
@@ -64,12 +75,7 @@ app.mount(
 # ---------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5500",
-        "http://127.0.0.1:5500",
-        "http://localhost:3000",
-        "http://localhost:5173",
-    ],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -84,12 +90,11 @@ for r in (
     users.router,
     nurseries.router,  # Added here
     plants.router,     # Added here
-    order.router,      # Added order router
+    cart.router,
     pages.router,
     maintenance.router,
     contact.router,
     about.router,
-    placeholders.plants_router,
     placeholders.rent_router,
     placeholders.buy_router,
 ):

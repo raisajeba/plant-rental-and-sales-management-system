@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/dashboard.css" />
 </head>
-<body data-page="plants" data-layout="dashboard" data-endpoint="/plants" data-icon="🌿">
+<body data-page="plants" data-layout="dashboard">
   <div class="app-layout">
     <aside class="sidebar" id="sidebar"></aside>
 
@@ -17,8 +17,74 @@
       <header class="topbar"><h1>Plants</h1></header>
       <div class="content">
         <div id="message" class="alert hidden"></div>
-        <section class="card state-box" id="featureBox">
-          <p>Loading...</p>
+        <p class="page-intro">Filter the listings to find plants that fit your space and budget.</p>
+        <section class="card plant-filters" aria-labelledby="filters-title">
+          <h2 id="filters-title">Filter plants</h2>
+          <form id="plantFilters">
+            <div class="plant-filter-grid">
+              <div class="form-group">
+                <label for="plantType">Plant type</label>
+                <select id="plantType" name="plant_type">
+                  <option value="">All types</option>
+                  <option value="Indoor">Indoor</option>
+                  <option value="Outdoor">Outdoor</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="plantSize">Size</label>
+                <input id="plantSize" name="size" type="text" maxlength="50" placeholder="e.g. Small" />
+              </div>
+              <div class="form-group">
+                <label for="minPrice">Minimum price</label>
+                <input id="minPrice" name="min_price" type="number" min="0" step="0.01" />
+              </div>
+              <div class="form-group">
+                <label for="maxPrice">Maximum price</label>
+                <input id="maxPrice" name="max_price" type="number" min="0" step="0.01" />
+              </div>
+              <div class="form-group">
+                <label for="availability">Availability</label>
+                <select id="availability" name="availability">
+                  <option value="">Any availability</option>
+                  <option value="available_for_sale">Available for sale</option>
+                  <option value="available_for_rent">Available for rent</option>
+                  <option value="available_for_both">Available for sale or rent</option>
+                  <option value="unavailable">Unavailable</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="plantCategory">Category</label>
+                <input id="plantCategory" name="category" type="text" maxlength="50" placeholder="e.g. Succulent" />
+              </div>
+            </div>
+            <p class="hint">A price range matches a plant if either its sale or rental price is in range.</p>
+            <div class="plant-filter-actions">
+              <button class="btn btn-primary" type="submit">Apply filters</button>
+              <button class="btn btn-reset" id="clearFilters" type="reset">Clear filters</button>
+            </div>
+          </form>
+        </section>
+        <section class="plant-results" aria-labelledby="results-title">
+          <div class="plant-results-header">
+            <h2 id="results-title">Plant listings</h2>
+            <p id="resultSummary" aria-live="polite"></p>
+          </div>
+          <div id="plantResults" class="plant-result-grid" aria-live="polite">
+            <p>Loading plants...</p>
+          </div>
+          <nav class="plant-pagination" aria-label="Plant listing pages">
+            <button class="btn btn-reset" id="previousPage" type="button" disabled>Previous</button>
+            <button class="btn btn-reset" id="nextPage" type="button" disabled>Next</button>
+          </nav>
+        </section>
+        <section class="plant-cart" aria-labelledby="cart-title">
+          <div class="plant-results-header">
+            <h2 id="cart-title">Your cart</h2>
+            <p id="cartSummary" aria-live="polite"></p>
+          </div>
+          <div id="cartItems" class="plant-result-grid" aria-live="polite">
+            <p>Loading your cart...</p>
+          </div>
         </section>
       </div>
     </div>
@@ -26,6 +92,6 @@
 
   <script src="js/app.js"></script>
   <script src="js/layout.js"></script>
-  <script src="js/pages/placeholder.js"></script>
+  <script src="js/pages/plants.js"></script>
 </body>
 </html>
