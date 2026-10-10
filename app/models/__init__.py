@@ -10,6 +10,8 @@ from app.models.revoked_token import RevokedToken
 from app.models.role import Role
 from app.models.role_page import RolePage
 from app.models.user import User
+from app.models.cart import Cart, CartItem
+from app.models.order import Order, OrderItem
 
 __all__ = [
     "User", "Role", "Page", "RolePage", "RevokedToken", "CartItem",

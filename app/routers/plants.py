@@ -170,3 +170,48 @@ def get_plant(plant_id: int, _: User = Depends(get_current_user), db: Session = 
     if plant is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant not found")
     return plant
+
+
+# 4. Update Plant (Authenticated Nursery Owner Only)
+@router.put("/{plant_id}", response_model=PlantOut)
+def update_plant(
+    plant_id: int,
+    plant_in: PlantUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    plant = db.get(Plant, plant_id)
+    if plant is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant not found")
+
+    verify_plant_ownership(db, current_user.id, plant)
+
+    update_data = plant_in.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(plant, key, value)
+
+    if plant.available_quantity == 0:
+        plant.availability_status = "UNAVAILABLE"
+
+    db.add(plant)
+    db.commit()
+    db.refresh(plant)
+    return plant
+
+
+# 5. Delete Plant (Authenticated Nursery Owner Only)
+@router.delete("/{plant_id}", status_code=status.HTTP_200_OK)
+def delete_plant(
+    plant_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    plant = db.get(Plant, plant_id)
+    if plant is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant not found")
+
+    verify_plant_ownership(db, current_user.id, plant)
+
+    db.delete(plant)
+    db.commit()
+    return {"message": "Plant deleted successfully"}
