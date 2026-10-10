@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 PHONE_PATTERN = re.compile(r"^\+?[0-9][0-9\s\-]{6,19}$")
 
+
 class NurseryCreate(BaseModel):
     name: str = Field(min_length=2, max_length=150)
     description: str | None = Field(default=None, max_length=500)
@@ -34,6 +35,40 @@ class NurseryCreate(BaseModel):
     @classmethod
     def lowercase_email(cls, v: str | None) -> str | None:
         return v.lower() if v else v
+
+
+class NurseryUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=150)
+    description: str | None = Field(default=None, max_length=500)
+    address: str | None = Field(default=None, min_length=5, max_length=255)
+    city: str | None = Field(default=None, min_length=2, max_length=100)
+    phone: str | None = Field(default=None, min_length=7, max_length=30)
+    email: EmailStr | None = None
+    image_url: str | None = Field(default=None, max_length=500)
+
+    @field_validator("name", "address", "city", "phone")
+    @classmethod
+    def strip_text(cls, v: str | None) -> str | None:
+        return v.strip() if v else v
+
+    @field_validator("description")
+    @classmethod
+    def blank_to_none(cls, v: str | None) -> str | None:
+        v = v.strip() if v else None
+        return v or None
+
+    @field_validator("phone")
+    @classmethod
+    def valid_phone(cls, v: str | None) -> str | None:
+        if v and not PHONE_PATTERN.match(v):
+            raise ValueError("Enter a valid phone number, e.g. +8801712345678")
+        return v
+
+    @field_validator("email")
+    @classmethod
+    def lowercase_email(cls, v: str | None) -> str | None:
+        return v.lower() if v else v
+
 
 class NurseryOut(BaseModel):
     id: int
