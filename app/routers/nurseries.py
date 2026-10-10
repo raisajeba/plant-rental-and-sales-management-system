@@ -2,24 +2,30 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+
 from app.core.constants import AvailabilityStatus, RoleName
+from app.crud import nursery as crud_nursery
 from app.database import get_db
 from app.dependencies.auth import get_current_user, require_roles
 from app.models import Nursery, Plant, User
-from app.schemas.nursery import NurseryCreate, NurseryOut
+from app.schemas.nursery import NurseryCreate, NurseryOut, NurseryUpdate
 from app.schemas.plant import PlantCreate, PlantOut
 
 router = APIRouter(prefix="/nurseries", tags=["Nurseries"])
+
 
 def _get_owned_nursery(nursery_id: int, user: User, db: Session) -> Nursery:
     nursery = db.get(Nursery, nursery_id)
     if nursery is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Nursery not found")
     if nursery.owner_id != user.id:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "You can only add plants to your own nursery")
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "You can only perform actions on your own nursery"
+        )
     if nursery.status != "active":
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "This nursery is not active")
     return nursery
+
 
 @router.post("", response_model=NurseryOut, status_code=status.HTTP_201_CREATED)
 def create_nursery(
@@ -32,7 +38,7 @@ def create_nursery(
     )
     if duplicate:
         raise HTTPException(status.HTTP_409_CONFLICT, "You already have a nursery with this name")
-    
+
     nursery = Nursery(owner_id=owner.id, **payload.model_dump())
     db.add(nursery)
     try:
@@ -43,6 +49,7 @@ def create_nursery(
     db.refresh(nursery)
     return nursery
 
+
 @router.get("/mine", response_model=list[NurseryOut])
 def list_my_nurseries(
     owner: User = Depends(require_roles(RoleName.NURSERY)),
@@ -50,6 +57,35 @@ def list_my_nurseries(
 ):
     stmt = select(Nursery).where(Nursery.owner_id == owner.id).order_by(Nursery.id.desc())
     return db.scalars(stmt).all()
+
+
+@router.get("/me", response_model=NurseryOut, summary="View Current Nursery Profile")
+def view_my_nursery_profile(
+    owner: User = Depends(require_roles(RoleName.NURSERY)),
+    db: Session = Depends(get_db),
+):
+    """View logged-in user's nursery profile."""
+    nursery = crud_nursery.get_nursery_by_owner_id(db, owner_id=owner.id)
+    if not nursery:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nursery profile not found for current user",
+        )
+    return nursery
+
+
+@router.put("/{nursery_id}", response_model=NurseryOut, summary="Update Nursery Profile")
+def update_nursery_profile(
+    nursery_id: int,
+    payload: NurseryUpdate,
+    owner: User = Depends(require_roles(RoleName.NURSERY)),
+    db: Session = Depends(get_db),
+):
+    """Update nursery details with authorization and ownership checks."""
+    nursery = _get_owned_nursery(nursery_id, owner, db)
+    updated_nursery = crud_nursery.update_nursery(db, db_nursery=nursery, nursery_in=payload)
+    return updated_nursery
+
 
 @router.get("", response_model=list[NurseryOut])
 def list_nurseries(
@@ -64,6 +100,7 @@ def list_nurseries(
         stmt = stmt.where(Nursery.city.ilike(f"%{city}%"))
     return db.scalars(stmt.order_by(Nursery.id.desc()).offset(skip).limit(limit)).all()
 
+
 @router.get("/{nursery_id}", response_model=NurseryOut)
 def get_nursery(
     nursery_id: int, _: User = Depends(get_current_user), db: Session = Depends(get_db)
@@ -72,6 +109,7 @@ def get_nursery(
     if nursery is None or nursery.status != "active":
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Nursery not found")
     return nursery
+
 
 @router.post("/{nursery_id}/plants", response_model=PlantOut, status_code=status.HTTP_201_CREATED)
 def add_plant_to_nursery(
@@ -86,7 +124,7 @@ def add_plant_to_nursery(
     )
     if duplicate:
         raise HTTPException(status.HTTP_409_CONFLICT, "This nursery already has a plant with this name")
-    
+
     data = payload.model_dump()
     data["availability_status"] = payload.availability_status.value
     plant = Plant(nursery_id=nursery.id, **data)
@@ -98,6 +136,7 @@ def add_plant_to_nursery(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "The plant could not be saved.")
     db.refresh(plant)
     return plant
+
 
 @router.get("/{nursery_id}/plants", response_model=list[PlantOut])
 def list_nursery_plants(
@@ -112,7 +151,7 @@ def list_nursery_plants(
     nursery = db.get(Nursery, nursery_id)
     if nursery is None or nursery.status != "active":
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Nursery not found")
-    
+
     stmt = select(Plant).where(Plant.nursery_id == nursery_id)
     if category:
         stmt = stmt.where(Plant.category.ilike(category))
