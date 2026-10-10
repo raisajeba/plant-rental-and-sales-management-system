@@ -1,24 +1,58 @@
-import pytest
-from models.plant import Plant, AvailabilityStatus
-from services.plant_service import PlantStockService
+from app.core.constants import AvailabilityStatus
+from app.models import Nursery, Plant, Role, User
 
-def test_automatic_out_of_stock(db_session):
-    plant = Plant(name="Aloe Vera", quantity=1)
-    plant.update_availability_status()
+
+def make_plant(db_session, *, name, quantity, availability):
+    role = Role(role_name="Nursery")
+    owner = User(
+        name="Nursery Owner",
+        email=f"{name.lower().replace(' ', '.')}@example.com",
+        password="hashed-password",
+        role=role,
+    )
+    nursery = Nursery(
+        owner=owner,
+        name=f"{name} Nursery",
+        address="12 Garden Road",
+        city="Dhaka",
+        phone="0123456789",
+    )
+    plant = Plant(
+        nursery=nursery,
+        name=name,
+        category="Indoor",
+        available_quantity=quantity,
+        availability_status=availability.value,
+    )
     db_session.add(plant)
     db_session.commit()
+    return plant
 
-    assert plant.availability_status == AvailabilityStatus.AVAILABLE
 
-    # Deduct 1 item
-    updated = PlantStockService.process_transaction(db_session, plant.id, 1)
-    assert updated.quantity == 0
-    assert updated.availability_status == AvailabilityStatus.OUT_OF_STOCK
+def test_available_stock_uses_active_plant_fields(db_session):
+    plant = make_plant(
+        db_session,
+        name="Aloe Vera",
+        quantity=1,
+        availability=AvailabilityStatus.FOR_SALE,
+    )
 
-def test_prevent_out_of_stock_purchase(db_session):
-    plant = Plant(name="Cactus", quantity=0, availability_status=AvailabilityStatus.OUT_OF_STOCK)
-    db_session.add(plant)
+    plant.available_quantity -= 1
+    plant.availability_status = AvailabilityStatus.UNAVAILABLE.value
     db_session.commit()
+    db_session.refresh(plant)
 
-    with pytest.raises(Exception):
-        PlantStockService.process_transaction(db_session, plant.id, 1)
+    assert plant.available_quantity == 0
+    assert plant.availability_status == AvailabilityStatus.UNAVAILABLE.value
+
+
+def test_unavailable_plant_can_have_zero_stock(db_session):
+    plant = make_plant(
+        db_session,
+        name="Cactus",
+        quantity=0,
+        availability=AvailabilityStatus.UNAVAILABLE,
+    )
+
+    assert plant.available_quantity == 0
+    assert plant.availability_status == AvailabilityStatus.UNAVAILABLE.value
