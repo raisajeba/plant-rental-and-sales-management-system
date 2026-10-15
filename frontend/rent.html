@@ -3,29 +3,40 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Rent | Green Forest</title>
+  <title>Rent Plants | Green Forest</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/dashboard.css" />
 </head>
-<body data-page="rent" data-layout="dashboard" data-endpoint="/rent" data-icon="🪴">
+<body data-page="rent" data-layout="dashboard">
   <div class="app-layout">
     <aside class="sidebar" id="sidebar"></aside>
 
     <div class="main">
-      <header class="topbar"><h1>Rent</h1></header>
+      <header class="topbar">
+        <h1>Rent Plants</h1>
+      </header>
+      
       <div class="content">
         <div id="message" class="alert hidden"></div>
-        <section class="card state-box" id="featureBox">
-          <p>Loading...</p>
-        </section>
+
+        <!-- Search & Description -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <p style="color: #666; margin: 0;">Explore our collection of plants available for temporary rent.</p>
+          <input type="text" id="searchInput" placeholder="Search plants to rent..." style="padding: 0.5rem 1rem; border: 1px solid #ddd; border-radius: 6px; width: 250px;" />
+        </div>
+
+        <!-- Rent Plants Grid Container -->
+        <div id="rentPlantsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.5rem;">
+          <div class="card" style="padding: 1.5rem; text-align: center; color: #666;">Loading plants for rent...</div>
+        </div>
       </div>
     </div>
   </div>
 
   <script src="js/app.js"></script>
   <script src="js/layout.js"></script>
-  <script src="js/pages/placeholder.js"></script>
+  <script src="js/pages/rent.js"></script>
 </body>
 </html>
