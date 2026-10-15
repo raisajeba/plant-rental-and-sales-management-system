@@ -1,15 +1,15 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.models.plant import Plant
-from app.models.cart import Cart, CartItem
+from app.models.cart_item import CartItem
 from app.models.order import Order, OrderItem
 from app.schemas.order import OrderStatus
 
 
 def create_purchase_order_from_cart(db: Session, user_id: int) -> Order:
     # 1. Validate Cart
-    cart = db.query(Cart).filter(Cart.user_id == user_id).first()
-    if not cart or not cart.items:
+    cart_items = db.query(CartItem).filter(CartItem.user_id == user_id).all()
+    if not cart_items:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Your cart is empty. Add plants before placing an order."
@@ -19,7 +19,7 @@ def create_purchase_order_from_cart(db: Session, user_id: int) -> Order:
     total_order_amount = 0.0
 
     # 2. Check Plant Availability and Calculate Amounts
-    for cart_item in cart.items:
+    for cart_item in cart_items:
         plant = db.query(Plant).filter(Plant.id == cart_item.plant_id).with_for_update().first()
         
         if not plant:
@@ -74,7 +74,7 @@ def create_purchase_order_from_cart(db: Session, user_id: int) -> Order:
     db.add(new_order)
 
     # Clear Cart Items after order creation
-    db.query(CartItem).filter(CartItem.cart_id == cart.id).delete()
+    db.query(CartItem).filter(CartItem.user_id == user_id).delete()
 
     db.commit()
     db.refresh(new_order)

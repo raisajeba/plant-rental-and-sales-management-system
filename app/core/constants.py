@@ -47,14 +47,13 @@ class AvailabilityStatus(str, Enum):
     FOR_BOTH = "available_for_both"
     UNAVAILABLE = "unavailable"
 
-# The user dashboard menu: the ONLY pages in the system, in display order.
+# The user dashboard menu, in display order.
 # (page_name, page_url, description)
 # The page_url values must match MENU_ROUTES in the frontend js/layout.js.
 MENU_PAGES: list[tuple[str, str, str]] = [
-    ("Plants", "/plants", "Plant list (coming soon)"),
-    ("Rent", "/rent", "Rent plants (coming soon)"),
-    ("Buy", "/buy", "Buy plants (coming soon)"),
+    ("Dashboard", "/dashboard", "User dashboard"),
+    ("Buy Plants", "/buy", "Browse plants available to buy"),
+    ("Rent Plants", "/rent", "Browse plants available to rent"),
     ("Maintenance", "/maintenance", "Care schedule and maintenance requests"),
-    ("Contact Us", "/contact", "Send us a message"),
-    ("About Us", "/about", "About Green Forest"),
+    ("My Profile", "/profile", "Manage your account details"),
 ]

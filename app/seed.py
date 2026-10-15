@@ -1,4 +1,4 @@
-"""Idempotent startup seed: roles, the six menu pages, and which roles can see them."""
+"""Idempotent startup seed: roles, menu pages, and which roles can see them."""
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
@@ -9,8 +9,7 @@ from app.models import Page, Role, RolePage
 def seed_initial_data(db: Session) -> None:
     menu_urls = [url for _, url, _ in MENU_PAGES]
 
-    # 1. The pages table contains ONLY the menu pages. Remove leftovers from earlier
-    #    versions (/dashboard, /my-orders, /profile, /admin/users ...).
+    # 1. Remove pages that are no longer part of the configured menu.
     stale_page_ids = select(Page.id).where(Page.page_url.not_in(menu_urls))
     db.execute(delete(RolePage).where(RolePage.page_id.in_(stale_page_ids)))
     db.execute(delete(Page).where(Page.page_url.not_in(menu_urls)))
@@ -37,7 +36,7 @@ def seed_initial_data(db: Session) -> None:
         pages.append(page)
     db.flush()  # assign ids
 
-    # 4. Every role sees the same six pages for now
+    # 4. Every role sees the same menu pages for now
     for role in roles:
         for page in pages:
             if db.get(RolePage, (role.id, page.id)) is None:
