@@ -9,9 +9,20 @@ from app.core.constants import AvailabilityStatus
 from app.database import get_db
 from app.dependencies.auth import get_current_user
 from app.models import Nursery, Plant, User
-from app.schemas.plant import PlantOut, PlantSearchOut
+from app.schemas.plant import PlantOut, PlantSearchOut, PlantUpdate
 
 router = APIRouter(prefix="/plants", tags=["Plants"])
+
+
+def verify_plant_ownership(db: Session, user_id: int, plant: Plant) -> None:
+    nursery = db.get(Nursery, plant.nursery_id)
+    if nursery is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Nursery not found")
+    if nursery.owner_id != user_id:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "You can only perform actions on plants in your own nursery",
+        )
 
 
 @router.get("", response_model=list[PlantSearchOut])
@@ -191,7 +202,7 @@ def update_plant(
         setattr(plant, key, value)
 
     if plant.available_quantity == 0:
-        plant.availability_status = "UNAVAILABLE"
+        plant.availability_status = AvailabilityStatus.UNAVAILABLE.value
 
     db.add(plant)
     db.commit()
