@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sell Orders | Green Forest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body data-page="sell-orders" data-layout="nursery">
+  <div class="app-layout">
+    <aside class="sidebar" id="nurserySidebar"></aside>
+
+    <div class="main">
+      <header class="topbar">
+        <h1>Sell Orders</h1>
+      </header>
+
+      <div class="content">
+        <div id="message" class="alert hidden"></div>
+
+        <!-- Sell Orders Table Card -->
+        <div class="card" style="padding: 1.5rem; overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 2px solid #eee; color: #666; font-size: 0.9rem;">
+                <th style="padding: 0.75rem;">Order ID</th>
+                <th style="padding: 0.75rem;">Customer</th>
+                <th style="padding: 0.75rem;">Plant</th>
+                <th style="padding: 0.75rem;">Quantity</th>
+                <th style="padding: 0.75rem;">Total Price</th>
+                <th style="padding: 0.75rem;">Order Date</th>
+                <th style="padding: 0.75rem;">Order Status</th>
+                <th style="padding: 0.75rem;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="sellOrdersTableBody">
+              <tr>
+                <td colspan="8" style="text-align: center; padding: 2rem; color: #666;">Loading sell orders...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/pages/sell-orders.js"></script>
+</body>
+</html>

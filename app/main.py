@@ -19,8 +19,8 @@ from app.routers import (
     contact,
     maintenance,
     nurseries,
+    order,
     pages,
-    placeholders,
     plants,
     users,
 )
@@ -90,13 +90,12 @@ for r in (
     users.router,
     nurseries.router,  # Added here
     plants.router,     # Added here
+    order.router,
     cart.router,
     pages.router,
     maintenance.router,
     contact.router,
     about.router,
-    placeholders.rent_router,
-    placeholders.buy_router,
 ):
     app.include_router(r, prefix=settings.API_V1_PREFIX)
 

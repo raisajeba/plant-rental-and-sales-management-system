@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Add Plant | Green Forest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body data-page="add-plant" data-layout="nursery">
+  <div class="app-layout">
+    <aside class="sidebar" id="nurserySidebar"></aside>
+
+    <div class="main">
+      <header class="topbar">
+        <h1>Add New Plant</h1>
+      </header>
+
+      <div class="content">
+        <div id="message" class="alert hidden"></div>
+
+        <div class="card" style="padding: 2rem; max-width: 800px;">
+          <form id="addPlantForm">
+            <div class="form-group">
+              <label for="nurserySelect">Nursery *</label>
+              <select id="nurserySelect" required>
+                <option value="">Loading nurseries...</option>
+              </select>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+              <div class="form-group">
+                <label for="plantName">Plant Name *</label>
+                <input type="text" id="plantName" placeholder="e.g. Golden Pothos" required />
+              </div>
+              <div class="form-group">
+                <label for="plantCategory">Plant Category *</label>
+                <select id="plantCategory" required>
+                  <option value="Indoor">Indoor</option>
+                  <option value="Outdoor">Outdoor</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+              <div class="form-group">
+                <label for="buyPrice">Buy Price (৳) *</label>
+                <input type="number" id="buyPrice" placeholder="750" required />
+              </div>
+              <div class="form-group">
+                <label for="rentPrice">Rent Price / Month (৳)</label>
+                <input type="number" id="rentPrice" placeholder="150" />
+              </div>
+              <div class="form-group">
+                <label for="quantity">Available Quantity *</label>
+                <input type="number" id="quantity" placeholder="25" required />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="description">Description</label>
+              <textarea id="description" rows="3" placeholder="Plant description and features..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="careInstructions">Plant Care Instructions</label>
+              <textarea id="careInstructions" rows="2" placeholder="Watering and sunlight requirements..."></textarea>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+              <button type="submit" class="btn btn-primary" style="background: #0d3b1e; color: #fff;">Upload Plant</button>
+              <button type="button" class="btn" onclick="window.location.href='nursery-dashboard.html'" style="border: 1px solid #ddd;">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/pages/add-plant.js"></script>
+</body>
+</html>
