@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.constants import AvailabilityStatus, RoleName
 from app.crud import nursery as crud_nursery
 from app.database import get_db
-from app.dependencies.auth import get_current_user, require_roles
+from app.dependencies.auth import require_roles
 from app.models import Nursery, Plant, User
 from app.schemas.nursery import NurseryCreate, NurseryOut, NurseryUpdate
 from app.schemas.plant import PlantCreate, PlantOut
@@ -74,6 +74,27 @@ def view_my_nursery_profile(
     return nursery
 
 
+@router.get("/mine/plants", response_model=list[PlantOut])
+def list_my_nursery_plants(
+    category: str | None = Query(None, max_length=50),
+    availability: AvailabilityStatus | None = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    owner: User = Depends(require_roles(RoleName.NURSERY)),
+    db: Session = Depends(get_db),
+):
+    stmt = (
+        select(Plant)
+        .join(Nursery, Plant.nursery_id == Nursery.id)
+        .where(Nursery.owner_id == owner.id)
+    )
+    if category:
+        stmt = stmt.where(Plant.category.ilike(category))
+    if availability:
+        stmt = stmt.where(Plant.availability_status == availability.value)
+    return db.scalars(stmt.order_by(Plant.id.desc()).offset(skip).limit(limit)).all()
+
+
 @router.put("/{nursery_id}", response_model=NurseryOut, summary="Update Nursery Profile")
 def update_nursery_profile(
     nursery_id: int,
@@ -92,7 +113,7 @@ def list_nurseries(
     city: str | None = Query(None, max_length=100),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_roles(RoleName.USER)),
     db: Session = Depends(get_db),
 ):
     stmt = select(Nursery).where(Nursery.status == "active")
@@ -103,7 +124,9 @@ def list_nurseries(
 
 @router.get("/{nursery_id}", response_model=NurseryOut)
 def get_nursery(
-    nursery_id: int, _: User = Depends(get_current_user), db: Session = Depends(get_db)
+    nursery_id: int,
+    _: User = Depends(require_roles(RoleName.USER)),
+    db: Session = Depends(get_db),
 ):
     nursery = db.get(Nursery, nursery_id)
     if nursery is None or nursery.status != "active":
@@ -145,7 +168,7 @@ def list_nursery_plants(
     availability: AvailabilityStatus | None = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_roles(RoleName.USER)),
     db: Session = Depends(get_db),
 ):
     nursery = db.get(Nursery, nursery_id)
