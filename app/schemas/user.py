@@ -58,6 +58,8 @@ class UserCreate(BaseModel):
     @field_validator("password")
     @classmethod
     def strong_password(cls, v: str) -> str:
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("Password must be at most 72 bytes long")
         if not re.search(r"[a-z]", v):
             raise ValueError("Password must contain a lowercase letter")
         if not re.search(r"[A-Z]", v):
@@ -117,4 +119,3 @@ class UserOut(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
-
