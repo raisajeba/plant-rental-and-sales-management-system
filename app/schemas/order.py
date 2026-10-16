@@ -5,6 +5,7 @@ from enum import Enum
 
 class OrderStatus(str, Enum):
     PENDING = "Pending"
+    CONFIRMED = "Confirmed"
     PROCESSING = "Processing"
     COMPLETED = "Completed"
     CANCELLED = "Cancelled"
@@ -29,3 +30,10 @@ class OrderOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+# --- Jira Feature: Order Status Update Request Schema ---
+class OrderStatusUpdate(BaseModel):
+    status: OrderStatus = Field(
+        ..., 
+        description="Must be one of: Pending, Confirmed, Processing, Completed, Cancelled"
+    )
