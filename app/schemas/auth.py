@@ -12,6 +12,13 @@ class LoginRequest(BaseModel):
     def lowercase_email(cls, v: str) -> str:
         return v.lower()
 
+    @field_validator("password")
+    @classmethod
+    def bcrypt_password_limit(cls, v: str) -> str:
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("Password must be at most 72 bytes long")
+        return v
+
 
 class TokenResponse(BaseModel):
     access_token: str
