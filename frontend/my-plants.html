@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Plants | Green Forest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body data-page="my-plants" data-layout="nursery">
+  <div class="app-layout">
+    <aside class="sidebar" id="nurserySidebar"></aside>
+
+    <div class="main">
+      <header class="topbar">
+        <h1>My Plants</h1>
+      </header>
+
+      <div class="content">
+        <div id="message" class="alert hidden"></div>
+        <section class="card" style="padding: 1.5rem; overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 2px solid #eee; color: #666; font-size: 0.9rem;">
+                <th style="padding: 0.75rem;">Plant</th>
+                <th style="padding: 0.75rem;">Category</th>
+                <th style="padding: 0.75rem;">Quantity</th>
+                <th style="padding: 0.75rem;">Availability</th>
+              </tr>
+            </thead>
+            <tbody id="myPlantsTableBody">
+              <tr><td colspan="4" style="text-align: center; padding: 2rem;">Loading your plants...</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/pages/my-plants.js"></script>
+</body>
+</html>

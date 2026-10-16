@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Service Maintenance | Green Forest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body data-page="nursery-maintenance" data-layout="nursery">
+  <div class="app-layout">
+    <aside class="sidebar" id="nurserySidebar"></aside>
+
+    <div class="main">
+      <header class="topbar">
+        <h1>Nursery Service & Maintenance Management</h1>
+      </header>
+
+      <div class="content">
+        <div id="message" class="alert hidden"></div>
+
+        <!-- Maintenance Requests Table Card -->
+        <div class="card" style="padding: 1.5rem; overflow-x: auto;">
+          <h3 style="margin-top: 0; margin-bottom: 1rem;">Incoming Maintenance & Care Requests</h3>
+          <p style="color: #666; margin-bottom: 1.5rem;">Review and assign maintenance tasks requested by customers for rented or purchased plants.</p>
+
+          <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 2px solid #eee; color: #666; font-size: 0.9rem;">
+                <th style="padding: 0.75rem;">Request ID</th>
+                <th style="padding: 0.75rem;">Customer</th>
+                <th style="padding: 0.75rem;">Plant Name</th>
+                <th style="padding: 0.75rem;">Service Type</th>
+                <th style="padding: 0.75rem;">Scheduled Date</th>
+                <th style="padding: 0.75rem;">Status</th>
+                <th style="padding: 0.75rem;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="nurseryMaintenanceTableBody">
+              <tr>
+                <td colspan="7" style="text-align: center; padding: 2rem; color: #666;">Loading service requests...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/pages/nursery-maintenance.js"></script>
+</body>
+</html>

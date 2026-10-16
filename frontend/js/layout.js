@@ -1,12 +1,12 @@
 /* =========================================================
    Shared dashboard layout: sidebar, menu, user card, logout.
 
-   Used by every page that has:
-     <body data-layout="dashboard">
+   Used by every authenticated portal page that has:
+     <body data-layout="dashboard"> or <body data-layout="nursery">
 
    and:
 
-     <aside class="sidebar" id="sidebar"></aside>
+     <aside class="sidebar"></aside>
 
    SCRIPT ORDER:
      1. js/app.js
@@ -19,23 +19,33 @@
 
   const body = document.body;
 
-  if (body.dataset.layout !== "dashboard") {
+  const layoutRole =
+    body.dataset.layout === "dashboard"
+      ? "User"
+      : body.dataset.layout === "nursery"
+        ? "Nursery"
+        : null;
+
+  if (!layoutRole) {
     return;
   }
 
   /* ---------- Authentication ---------- */
+
+  body.style.visibility = "hidden";
 
   if (!getToken()) {
     window.location.replace("login.html");
     return;
   }
 
-  const sidebar = document.getElementById("sidebar");
+  const sidebar = document.querySelector(".sidebar");
 
   if (!sidebar) {
     console.error(
-      'layout.js: add <aside class="sidebar" id="sidebar"></aside> to this page'
+      "layout.js: add a sidebar element to this page"
     );
+    body.style.visibility = "visible";
     return;
   }
 
@@ -43,43 +53,75 @@
      Menu configuration
      ========================================================= */
 
-  const MENU_ROUTES = [
-    {
-      url: "/dashboard",
-      label: "Dashboard",
-      file: "dashboard.html",
-      icon: "dashboard",
-      ready: true
-    },
-    {
-      url: "/buy",
-      label: "Buy Plants",
-      file: "buy.html",
-      icon: "buy",
-      ready: true
-    },
-    {
-      url: "/rent",
-      label: "Rent Plants",
-      file: "rent.html",
-      icon: "rent",
-      ready: true
-    },
-    {
-      url: "/maintenance",
-      label: "Maintenance",
-      file: "maintenance.html",
-      icon: "maintenance",
-      ready: true
-    },
-    {
-      url: "/profile",
-      label: "My Profile",
-      file: "profile.html",
-      icon: "profile",
-      ready: true
-    }
-  ];
+  const MENU_ROUTES = {
+    User: [
+      {
+        url: "/dashboard",
+        label: "Dashboard",
+        file: "dashboard.html",
+        icon: "dashboard"
+      },
+      { url: "/buy", label: "Buy", file: "buy.html", icon: "buy" },
+      { url: "/rent", label: "Rent", file: "rent.html", icon: "rent" },
+      {
+        url: "/customer-history",
+        label: "Purchase History",
+        file: "customer-history.html",
+        icon: "orders"
+      },
+      {
+        url: "/maintenance",
+        label: "Maintenance",
+        file: "maintenance.html",
+        icon: "maintenance"
+      },
+      { url: "/profile", label: "Profile", file: "profile.html", icon: "profile" }
+    ],
+    Nursery: [
+      {
+        url: "/nursery-dashboard",
+        label: "Nursery Dashboard",
+        file: "nursery-dashboard.html",
+        icon: "dashboard"
+      },
+      {
+        url: "/my-plants",
+        label: "My Plants",
+        file: "my-plants.html",
+        icon: "plants"
+      },
+      {
+        url: "/add-plant",
+        label: "Add Plant",
+        file: "add-plant.html",
+        icon: "add"
+      },
+      {
+        url: "/sell-orders",
+        label: "Sell Orders",
+        file: "sell-orders.html",
+        icon: "orders"
+      },
+      {
+        url: "/rent-orders",
+        label: "Rent Orders",
+        file: "rent-orders.html",
+        icon: "orders"
+      },
+      {
+        url: "/nursery-maintenance",
+        label: "Nursery Maintenance",
+        file: "nursery-maintainance.html",
+        icon: "maintenance"
+      },
+      {
+        url: "/nursery-profile",
+        label: "Nursery Profile",
+        file: "nursery-profile.html",
+        icon: "profile"
+      }
+    ]
+  };
 
   /* =========================================================
      Icons
@@ -100,6 +142,15 @@
 
     maintenance:
       '<path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/>',
+
+    plants:
+      '<path d="M20 4c-8 0-13 4-13 11 0 2 1 4 3 5 7 0 11-6 10-16z"/>' +
+      '<path d="M4 21c3-5 6-8 11-11"/>',
+
+    add: '<path d="M12 5v14M5 12h14"/>',
+
+    orders:
+      '<path d="M6 3h12v18H6zM9 7h6M9 11h6M9 15h4"/>',
 
     profile:
       '<circle cx="12" cy="9" r="3.5"/>' +
@@ -292,7 +343,7 @@
      5. Build menu
      ========================================================= */
 
-  function renderNav(allowedUrls) {
+  function renderNav(role, allowedUrls) {
     const nav =
       document.getElementById(
         "sidebarNav"
@@ -300,12 +351,9 @@
 
     nav.replaceChildren();
 
-    const items =
-      MENU_ROUTES.filter(
-        (route) =>
-          !allowedUrls ||
-          allowedUrls.has(route.url)
-      );
+    const items = MENU_ROUTES[role].filter((route) =>
+      allowedUrls.has(route.url)
+    );
 
     if (items.length === 0) {
       const note =
@@ -326,31 +374,9 @@
       const isActive =
         route.file === currentFile;
 
-      const node =
-        document.createElement(
-          route.ready
-            ? "a"
-            : "span"
-        );
-
-      node.className =
-        "nav-link" +
-        (isActive
-          ? " active"
-          : "") +
-        (route.ready
-          ? ""
-          : " disabled");
-
-      if (route.ready) {
-        node.href =
-          route.file;
-      } else {
-        node.setAttribute(
-          "aria-disabled",
-          "true"
-        );
-      }
+      const node = document.createElement("a");
+      node.className = "nav-link" + (isActive ? " active" : "");
+      node.href = route.file;
 
       if (isActive) {
         node.setAttribute(
@@ -368,21 +394,6 @@
         )
       );
 
-      if (!route.ready) {
-        const tag =
-          document.createElement(
-            "span"
-          );
-
-        tag.className =
-          "soon-tag";
-
-        tag.textContent =
-          "Soon";
-
-        node.append(tag);
-      }
-
       nav.append(node);
     });
   }
@@ -391,62 +402,50 @@
      6. Load backend data
      ========================================================= */
 
+  function showAuthorizationError(error) {
+    console.error("Could not verify portal access:", error);
+    document.querySelector(".app-layout").hidden = true;
+    const message = document.createElement("p");
+    message.className = "alert alert-error";
+    message.textContent =
+      "Your access could not be verified. Please try again when the service is available.";
+    body.append(message);
+    body.style.visibility = "visible";
+  }
+
   async function init() {
-    const [me, menu] =
-      await Promise.allSettled([
-        apiRequest(
-          "/users/me",
-          { auth: true }
-        ),
-        apiRequest(
-          "/pages/my-menu",
-          { auth: true }
-        )
-      ]);
+    try {
+      const user = await apiRequest("/users/me", { auth: true });
+      const role = user.role && user.role.role_name;
 
-    if (me.status === "fulfilled") {
-      renderUser(
-        me.value
+      if (role !== layoutRole) {
+        const portal = {
+          User: "dashboard.html",
+          Nursery: "nursery-dashboard.html"
+        }[role];
+
+        if (portal) {
+          window.location.replace(portal);
+        } else {
+          clearToken();
+          window.location.replace("login.html");
+        }
+        return { user: null };
+      }
+
+      const menu = await apiRequest("/pages/my-menu", { auth: true });
+      renderUser(user);
+      renderNav(
+        role,
+        new Set(menu.map((page) => page.page_url))
       );
-    } else {
-      document
-        .getElementById(
-          "sidebarName"
-        )
-        .textContent =
-        "My account";
+      body.style.visibility = "visible";
+
+      return { user };
+    } catch (error) {
+      showAuthorizationError(error);
+      return { user: null };
     }
-
-    let allowedUrls = null;
-
-    if (
-      menu.status ===
-      "fulfilled"
-    ) {
-      allowedUrls =
-        new Set(
-          menu.value.map(
-            (page) =>
-              page.page_url
-          )
-        );
-    } else {
-      console.warn(
-        "Could not load /pages/my-menu, showing the default menu:",
-        menu.reason
-      );
-    }
-
-    renderNav(
-      allowedUrls
-    );
-
-    return {
-      user:
-        me.status === "fulfilled"
-          ? me.value
-          : null
-    };
   }
 
   window.dashboardShell = {
