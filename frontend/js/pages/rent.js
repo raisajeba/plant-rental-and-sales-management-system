@@ -2,16 +2,11 @@
    PAGE: rent (Rent Plants)
    ========================================================= */
 function initRentPage() {
-  if (!getToken()) {
-    window.location.replace("login.html");
-    return;
-  }
-
   const grid = document.getElementById("rentPlantsGrid");
 
   async function loadRentPlants() {
     try {
-      const plants = await apiRequest("/api/v1/plants", { auth: true });
+      const plants = await apiRequest("/plants", { auth: true });
       
       if (!plants || plants.length === 0) {
         grid.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: #666;">No plants available for rent right now.</p>`;
@@ -19,7 +14,14 @@ function initRentPage() {
       }
 
       // Filter plants that have rent_price available
-      const rentPlants = plants.filter(p => p.rent_price && p.rent_price > 0);
+      const rentPlants = plants.filter(
+        (plant) =>
+          plant.rent_price > 0 &&
+          plant.available_quantity > 0 &&
+          ["available_for_rent", "available_for_both"].includes(
+            plant.availability_status
+          )
+      );
 
       if (rentPlants.length === 0) {
         grid.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: #666;">No plants available for rent currently.</p>`;
@@ -27,20 +29,70 @@ function initRentPage() {
       }
 
       grid.innerHTML = "";
-      rentPlants.forEach(plant => {
+      rentPlants.forEach((plant) => {
         const card = document.createElement("div");
         card.className = "card";
         card.style.cssText = "padding: 1rem; display: flex; flex-direction: column; justify-content: space-between; border-radius: 8px;";
-        
-        card.innerHTML = `
-          <div>
-            <div style="height: 140px; background: #e6f4ea; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 3rem; margin-bottom: 1rem;">🪴</div>
-            <h4 style="margin: 0 0 0.5rem 0; font-size: 1.1rem;">${plant.name}</h4>
-            <p style="margin: 0 0 0.5rem 0; color: #666; font-size: 0.85rem;">Category: ${plant.category || 'General'}</p>
-            <p style="margin: 0 0 1rem 0; font-weight: 700; color: #137333; font-size: 1.1rem;">৳${plant.rent_price} / month</p>
-          </div>
-          <button onclick="addToRentCart(${plant.id})" style="background: #0d3b1e; color: #fff; border: none; padding: 0.5rem; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%;">Rent Now</button>
-        `;
+
+        const plantName = document.createElement("h4");
+        plantName.textContent = plant.name;
+        const category = document.createElement("p");
+        category.textContent = `Category: ${plant.category || "General"}`;
+        const price = document.createElement("p");
+        price.textContent = `৳${plant.rent_price} / month`;
+        const quantity = document.createElement("input");
+        quantity.type = "number";
+        quantity.min = "1";
+        quantity.max = String(plant.available_quantity);
+        quantity.value = "1";
+        quantity.setAttribute("aria-label", `Quantity to rent for ${plant.name}`);
+        const rentButton = document.createElement("button");
+        rentButton.type = "button";
+        rentButton.className = "btn btn-primary";
+        rentButton.textContent = "Rent Now";
+        rentButton.addEventListener("click", async () => {
+          const months = Number.parseInt(
+            document.getElementById("rentalMonths").value,
+            10
+          );
+          const requestedQuantity = Number.parseInt(quantity.value, 10);
+          if (!Number.isInteger(months) || months < 1 || months > 120) {
+            showMessage("Choose a rental term between 1 and 120 months.");
+            return;
+          }
+          if (
+            !Number.isInteger(requestedQuantity) ||
+            requestedQuantity < 1 ||
+            requestedQuantity > plant.available_quantity
+          ) {
+            showMessage(`Choose a quantity between 1 and ${plant.available_quantity}.`);
+            return;
+          }
+          rentButton.disabled = true;
+          try {
+            const order = await apiRequest("/orders/rentals", {
+              method: "POST",
+              auth: true,
+              body: {
+                plant_id: plant.id,
+                quantity: requestedQuantity,
+                rental_months: months
+              }
+            });
+            showMessage(
+              `Rental order #${order.id} placed. View it in Purchase History.`,
+              "success"
+            );
+          } catch (error) {
+            showMessage(error.message);
+          } finally {
+            rentButton.disabled = false;
+          }
+        });
+
+        const details = document.createElement("div");
+        details.append(plantName, category, price, quantity, rentButton);
+        card.append(details);
         grid.appendChild(card);
       });
 
@@ -53,12 +105,12 @@ function initRentPage() {
   loadRentPlants();
 }
 
-window.addToRentCart = function(plantId) {
-  showMessage(`Plant #${plantId} added to cart for rent!`, "success");
-};
-
 document.addEventListener("DOMContentLoaded", () => {
   if (document.body.dataset.page === "rent") {
-    initRentPage();
+    window.dashboardShell.ready.then(({ user }) => {
+      if (user && user.role.role_name === "User") {
+        initRentPage();
+      }
+    });
   }
 });

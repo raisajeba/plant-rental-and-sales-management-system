@@ -1,6 +1,21 @@
 /* Extra styles for the shared dashboard layout.
    Uses the CSS variables already defined in style.css. */
 
+body[data-layout] { visibility: hidden; }
+
+.order-history-table { width: 100%; border-collapse: collapse; text-align: left; }
+.order-history-table th, .order-history-table td { padding: 12px; border-bottom: 1px solid var(--border); }
+.order-history-table th { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.order-history-state { text-align: center; color: var(--muted); padding: 28px !important; }
+.order-details-row td { background: var(--bg); }
+.order-details-list { padding-left: 20px; }
+.order-details-list li + li { margin-top: 6px; }
+.badge.pending, .badge.confirmed, .badge.processing { background: var(--warn-bg); color: var(--warn); }
+.badge.completed { background: var(--green-100); color: var(--green-700); }
+.badge.cancelled { background: var(--danger-bg); color: var(--danger); }
+.sell-order-status-control { display: grid; gap: 6px; min-width: 120px; }
+.sell-order-status-control select { max-width: 150px; }
+
 /* ---- User card at the top of the sidebar (now a link to the profile) ---- */
 a.user-chip {
   color: inherit;
