@@ -2,6 +2,9 @@ import re
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
+from app.core.constants import NurseryStatus
+from app.schemas.user import UserOut
+
 PHONE_PATTERN = re.compile(r"^\+?[0-9][0-9\s\-]{6,19}$")
 
 
@@ -85,3 +88,11 @@ class NurseryOut(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AdminNurseryOut(NurseryOut):
+    owner: UserOut
+
+
+class AdminNurseryUpdate(BaseModel):
+    status: NurseryStatus

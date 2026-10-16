@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.core.constants import AvailabilityStatus, RoleName
+from app.core.constants import AvailabilityStatus, ListingApprovalStatus, RoleName
 from app.database import get_db
 from app.dependencies.auth import require_roles
 from app.models import Nursery, Plant, User
@@ -59,7 +59,10 @@ def list_plants(
     statement = (
         select(Plant, Nursery.name.label("nursery_name"))
         .join(Nursery, Plant.nursery_id == Nursery.id)
-        .where(Nursery.status == "active")
+        .where(
+            Nursery.status == "active",
+            Plant.approval_status == ListingApprovalStatus.APPROVED.value,
+        )
     )
     if plant_type is not None:
         statement = statement.where(
@@ -138,6 +141,7 @@ def search_plants(
         .join(Nursery, Plant.nursery_id == Nursery.id)
         .where(
             Nursery.status == "active",
+            Plant.approval_status == ListingApprovalStatus.APPROVED.value,
             Plant.available_quantity > 0,
             Plant.availability_status.in_(
                 [
@@ -182,7 +186,10 @@ def get_plant(
     db: Session = Depends(get_db),
 ):
     plant = db.get(Plant, plant_id)
-    if plant is None:
+    if (
+        plant is None
+        or plant.approval_status != ListingApprovalStatus.APPROVED.value
+    ):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant not found")
     return plant
 

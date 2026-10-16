@@ -2,12 +2,16 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.models.plant import Plant
 from app.schemas.plant import PlantCreate, PlantUpdate
-from app.core.constants import AvailabilityStatus
+from app.core.constants import AvailabilityStatus, ListingApprovalStatus
 
 class CRUDPlant:
     def create_plant(self, db: Session, plant_in: PlantCreate, nursery_id: int) -> Plant:
         plant_data = plant_in.model_dump()
-        db_plant = Plant(**plant_data, nursery_id=nursery_id)
+        db_plant = Plant(
+            **plant_data,
+            nursery_id=nursery_id,
+            approval_status=ListingApprovalStatus.PENDING.value,
+        )
         db.add(db_plant)
         db.commit()
         db.refresh(db_plant)

@@ -215,13 +215,32 @@ function initIndexPage() {
   );
 }
 
+async function redirectAuthenticatedUser() {
+  try {
+    const user = await apiRequest("/users/me", { auth: true });
+    const portal = {
+      User: "dashboard.html",
+      Nursery: "nursery-dashboard.html",
+      Admin: "admin.html"
+    }[user.role && user.role.role_name];
+
+    if (portal) {
+      window.location.replace(portal);
+    }
+  } catch (err) {
+    if (!(err instanceof ApiError) || err.status !== 401) {
+      showMessage(err.message);
+    }
+  }
+}
+
 
 /* =========================================================
    PAGE: login
    ========================================================= */
 function initLoginPage() {
   if (getToken()) {
-    window.location.replace("profile.html");
+    redirectAuthenticatedUser();
     return;
   }
 
@@ -262,8 +281,12 @@ function initLoginPage() {
       });
 
       setToken(data.access_token);
-
-      window.location.href = "profile.html";
+      const portal = {
+        User: "dashboard.html",
+        Nursery: "nursery-dashboard.html",
+        Admin: "admin.html"
+      }[data.user.role.role_name];
+      window.location.href = portal || "login.html";
     } catch (err) {
       showMessage(err.message);
       setLoading(button, false);
@@ -277,7 +300,7 @@ function initLoginPage() {
    ========================================================= */
 function initRegisterPage() {
   if (getToken()) {
-    window.location.replace("profile.html");
+    redirectAuthenticatedUser();
     return;
   }
 
@@ -339,7 +362,7 @@ function initRegisterPage() {
       });
 
       showMessage(
-        "Account created! Redirecting to login...",
+        "Account submitted for approval. You can log in after it is approved.",
         "success"
       );
 

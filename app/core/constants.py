@@ -19,6 +19,23 @@ class UserStatus(str, Enum):
     BLOCKED = "blocked"
 
 
+class ApprovalStatus(str, Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class NurseryStatus(str, Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+
+
+class ListingApprovalStatus(str, Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
 class MaintenanceTask(str, Enum):
     WATERING = "watering"
     FERTILIZING = "fertilizing"
@@ -69,4 +86,8 @@ NURSERY_MENU_PAGES: list[tuple[str, str, str]] = [
     ("Nursery Profile", "/nursery-profile", "Manage your nursery profile"),
 ]
 
-ALL_MENU_PAGES = MENU_PAGES + NURSERY_MENU_PAGES
+ADMIN_MENU_PAGES: list[tuple[str, str, str]] = [
+    ("Admin", "/admin", "Manage users and system access"),
+]
+
+ALL_MENU_PAGES = MENU_PAGES + NURSERY_MENU_PAGES + ADMIN_MENU_PAGES

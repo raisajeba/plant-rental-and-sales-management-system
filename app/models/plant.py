@@ -1,6 +1,15 @@
-from sqlalchemy import ForeignKey, Integer, String, Text, Numeric, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.constants import ListingApprovalStatus
 from app.database import Base
 from app.models.mixins import TimestampMixin
 
@@ -13,7 +22,11 @@ class Plant(TimestampMixin, Base):
             "name",
             name="uq_plants_nursery_name",
         ),
-        {'extend_existing': True}
+        CheckConstraint(
+            "approval_status IN ('pending', 'approved', 'rejected')",
+            name="ck_plants_approval_status",
+        ),
+        {"extend_existing": True},
     )
 
     id: Mapped[int] = mapped_column(
@@ -66,6 +79,13 @@ class Plant(TimestampMixin, Base):
         nullable=False,
         default="unavailable",
         server_default="unavailable",
+    )
+
+    approval_status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default=ListingApprovalStatus.APPROVED.value,
+        server_default=ListingApprovalStatus.APPROVED.value,
     )
 
     care_instructions: Mapped[str | None] = mapped_column(

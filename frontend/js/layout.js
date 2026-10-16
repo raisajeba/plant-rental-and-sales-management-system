@@ -24,6 +24,8 @@
       ? "User"
       : body.dataset.layout === "nursery"
         ? "Nursery"
+        : body.dataset.layout === "admin"
+          ? "Admin"
         : null;
 
   if (!layoutRole) {
@@ -118,6 +120,14 @@
         url: "/nursery-profile",
         label: "Nursery Profile",
         file: "nursery-profile.html",
+        icon: "profile"
+      }
+    ],
+    Admin: [
+      {
+        url: "/admin",
+        label: "Admin",
+        file: "admin.html",
         icon: "profile"
       }
     ]
@@ -421,7 +431,8 @@
       if (role !== layoutRole) {
         const portal = {
           User: "dashboard.html",
-          Nursery: "nursery-dashboard.html"
+          Nursery: "nursery-dashboard.html",
+          Admin: "admin.html"
         }[role];
 
         if (portal) {

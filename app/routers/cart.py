@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
-from app.core.constants import AvailabilityStatus, RoleName
+from app.core.constants import AvailabilityStatus, ListingApprovalStatus, RoleName
 from app.database import get_db
 from app.dependencies.auth import require_roles
 from app.models import CartItem, Plant, User
@@ -44,7 +44,10 @@ def add_cart_item(
     plant = db.scalar(
         select(Plant).where(Plant.id == payload.plant_id).with_for_update()
     )
-    if plant is None:
+    if (
+        plant is None
+        or plant.approval_status != ListingApprovalStatus.APPROVED.value
+    ):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant not found")
     if plant.nursery.status != "active":
         raise HTTPException(
@@ -129,6 +132,8 @@ def update_cart_item_quantity(
         .with_for_update()
     )
     if plant is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant not found")
+    if plant.approval_status != ListingApprovalStatus.APPROVED.value:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant not found")
     if plant.nursery.status != "active" or plant.availability_status not in _SALE_STATUSES:
         raise HTTPException(

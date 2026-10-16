@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.constants import AvailabilityStatus, RoleName
+from app.core.constants import AvailabilityStatus, ListingApprovalStatus, RoleName
 from app.crud import nursery as crud_nursery
 from app.database import get_db
 from app.dependencies.auth import require_roles
@@ -150,7 +150,11 @@ def add_plant_to_nursery(
 
     data = payload.model_dump()
     data["availability_status"] = payload.availability_status.value
-    plant = Plant(nursery_id=nursery.id, **data)
+    plant = Plant(
+        nursery_id=nursery.id,
+        approval_status=ListingApprovalStatus.PENDING.value,
+        **data,
+    )
     db.add(plant)
     try:
         db.commit()
@@ -175,7 +179,10 @@ def list_nursery_plants(
     if nursery is None or nursery.status != "active":
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Nursery not found")
 
-    stmt = select(Plant).where(Plant.nursery_id == nursery_id)
+    stmt = select(Plant).where(
+        Plant.nursery_id == nursery_id,
+        Plant.approval_status == ListingApprovalStatus.APPROVED.value,
+    )
     if category:
         stmt = stmt.where(Plant.category.ilike(category))
     if availability:

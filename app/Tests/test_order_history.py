@@ -8,10 +8,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.core.constants import AvailabilityStatus
+from app.core.constants import AvailabilityStatus, ListingApprovalStatus
 from app.database import Base, get_db
 from app.dependencies.auth import get_current_user
-from app.models import Nursery, Order, OrderItem, Plant, RentalOrder, Role, User
+from app.models import CartItem, Nursery, Order, OrderItem, Plant, RentalOrder, Role, User
+from app.routers.cart import router as cart_router
 from app.routers.order import router
 
 
@@ -26,6 +27,7 @@ def order_client():
     Base.metadata.create_all(bind=engine)
     app = FastAPI()
     app.include_router(router, prefix="/api/v1")
+    app.include_router(cart_router, prefix="/api/v1")
 
     user_role = Role(role_name="User")
     nursery_role = Role(role_name="Nursery")
@@ -113,7 +115,7 @@ def order_client():
         ids = (purchase.id, rental.id, another_users_order.id, plant.id)
 
     with TestClient(app) as client:
-        yield client, customer.id, *ids
+        yield client, customer.id, *ids, testing_session
 
     app.dependency_overrides.clear()
     Base.metadata.drop_all(bind=engine)
@@ -121,7 +123,7 @@ def order_client():
 
 
 def test_my_orders_returns_only_current_users_purchase_and_rental_history(order_client):
-    client, _, purchase_id, rental_id, other_purchase_id, _ = order_client
+    client, _, purchase_id, rental_id, other_purchase_id, _, _ = order_client
 
     response = client.get("/api/v1/orders/my-orders")
 
@@ -140,7 +142,7 @@ def test_my_orders_returns_only_current_users_purchase_and_rental_history(order_
 
 
 def test_order_detail_is_scoped_to_current_user_and_order_type(order_client):
-    client, _, purchase_id, rental_id, other_purchase_id, _ = order_client
+    client, _, purchase_id, rental_id, other_purchase_id, _, _ = order_client
 
     purchase_response = client.get(
         f"/api/v1/orders/my-orders/purchase/{purchase_id}"
@@ -160,7 +162,7 @@ def test_order_detail_is_scoped_to_current_user_and_order_type(order_client):
 
 
 def test_rental_checkout_creates_history_record_for_customer(order_client):
-    client, customer_id, _, _, _, plant_id = order_client
+    client, customer_id, _, _, _, plant_id, _ = order_client
 
     response = client.post(
         "/api/v1/orders/rentals",
@@ -173,7 +175,7 @@ def test_rental_checkout_creates_history_record_for_customer(order_client):
 
 
 def test_nursery_role_cannot_read_or_create_customer_orders(order_client):
-    client, _, _, _, _, plant_id = order_client
+    client, _, _, _, _, plant_id, _ = order_client
     nursery_user = SimpleNamespace(
         id=999,
         role=SimpleNamespace(role_name="Nursery"),
@@ -185,3 +187,21 @@ def test_nursery_role_cannot_read_or_create_customer_orders(order_client):
         "/api/v1/orders/rentals",
         json={"plant_id": plant_id, "quantity": 1, "rental_months": 1},
     ).status_code == 403
+
+
+def test_pending_plant_cannot_be_purchased_or_rented(order_client):
+    client, customer_id, _, _, _, plant_id, testing_session = order_client
+    with testing_session() as session:
+        plant = session.get(Plant, plant_id)
+        plant.approval_status = ListingApprovalStatus.PENDING.value
+        session.add(CartItem(user_id=customer_id, plant_id=plant_id, quantity=1))
+        session.commit()
+
+    purchase_response = client.post("/api/v1/orders/checkout")
+    rental_response = client.post(
+        "/api/v1/orders/rentals",
+        json={"plant_id": plant_id, "quantity": 1, "rental_months": 1},
+    )
+
+    assert purchase_response.status_code == 404
+    assert rental_response.status_code == 404
