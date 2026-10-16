@@ -27,6 +27,14 @@ def list_users(
     return db.scalars(select(User).order_by(User.id).offset(skip).limit(limit)).all()
 
 
+@router.get("/users/{user_id}", response_model=UserOut)
+def get_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    return user
+
+
 @router.patch("/users/{user_id}", response_model=UserOut)
 def update_user(
     user_id: int,

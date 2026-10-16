@@ -12,6 +12,7 @@ from app.database import Base, get_db
 from app.models import Role, User
 from app.routers.admin import router as admin_router
 from app.routers.auth import router as auth_router
+from app.routers.users import router as users_router
 from app.seed import seed_initial_data
 
 
@@ -56,6 +57,7 @@ def admin_api(admin_db_session, monkeypatch):
     app = FastAPI()
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(admin_router, prefix="/api/v1")
+    app.include_router(users_router, prefix="/api/v1")
     app.dependency_overrides[get_db] = lambda: admin_db_session
 
     with TestClient(app) as client:
@@ -68,6 +70,7 @@ def test_admin_api_rejects_anonymous_and_non_admin_users(admin_api):
     client, _, customer, _ = admin_api
 
     assert client.get("/api/v1/admin/users").status_code == 401
+    assert client.get("/api/v1/admin/users/1").status_code == 401
     registration = client.post(
         "/api/v1/auth/register",
         json={
@@ -90,6 +93,11 @@ def test_admin_api_rejects_anonymous_and_non_admin_users(admin_api):
         headers={"Authorization": f"Bearer {customer_token}"},
     )
     assert denied.status_code == 403
+    denied_details = client.get(
+        "/api/v1/admin/users/1",
+        headers={"Authorization": f"Bearer {customer_token}"},
+    )
+    assert denied_details.status_code == 403
 
 
 def test_admin_can_login_use_admin_api_and_revoke_token(admin_api):
@@ -132,6 +140,64 @@ def test_admin_can_login_use_admin_api_and_revoke_token(admin_api):
     assert revoked_request.json()["detail"] == (
         "Token has been revoked. Please log in again"
     )
+
+
+def test_admin_can_view_and_manage_accounts_and_inactive_users_are_blocked(admin_api):
+    client, admin, customer, db_session = admin_api
+    admin_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": admin.email, "password": "AdminPassword123"},
+    )
+    admin_headers = {
+        "Authorization": f"Bearer {admin_login.json()['access_token']}"
+    }
+    customer_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": customer.email, "password": "CustomerPassword123"},
+    )
+    customer_headers = {
+        "Authorization": f"Bearer {customer_login.json()['access_token']}"
+    }
+
+    details = client.get(
+        f"/api/v1/admin/users/{customer.id}", headers=admin_headers
+    )
+    assert details.status_code == 200
+    assert details.json()["id"] == customer.id
+    assert details.json()["name"] == customer.name
+    assert details.json()["email"] == customer.email
+    assert details.json()["role"]["role_name"] == "User"
+    assert details.json()["status"] == "active"
+    assert details.json()["created_at"]
+
+    nursery_role = db_session.scalar(
+        select(Role).where(Role.role_name == RoleName.NURSERY.value)
+    )
+    update = client.patch(
+        f"/api/v1/admin/users/{customer.id}",
+        headers=admin_headers,
+        json={"role_id": nursery_role.id, "status": "inactive"},
+    )
+    assert update.status_code == 200
+    assert update.json()["role"]["role_name"] == "Nursery"
+    assert update.json()["status"] == "inactive"
+
+    denied = client.get("/api/v1/users/me", headers=customer_headers)
+    assert denied.status_code == 403
+    assert denied.json()["detail"] == "Account is not active"
+
+    reactivate = client.patch(
+        f"/api/v1/admin/users/{customer.id}",
+        headers=admin_headers,
+        json={"status": "active"},
+    )
+    assert reactivate.status_code == 200
+    profile = client.get("/api/v1/users/me", headers=customer_headers)
+    assert profile.status_code == 200
+    assert profile.json()["role"]["role_name"] == "Nursery"
+
+    missing = client.get("/api/v1/admin/users/99999", headers=admin_headers)
+    assert missing.status_code == 404
 
 
 def test_admin_bootstrap_is_hashed_idempotent_and_never_promotes(

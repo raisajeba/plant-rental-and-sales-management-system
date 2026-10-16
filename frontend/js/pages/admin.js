@@ -15,6 +15,28 @@ function createSelect(options, selectedValue, label) {
   return select;
 }
 
+function formatRegistrationDate(value) {
+  return new Date(value).toLocaleString();
+}
+
+function appendAccountDetails(row, user) {
+  const detailsRow = document.createElement("tr");
+  detailsRow.dataset.userDetails = String(user.id);
+  const cell = detailsRow.insertCell();
+  cell.colSpan = 7;
+  cell.className = "order-history-state";
+  cell.textContent = [
+    `User ID: ${user.id}`,
+    `Name: ${user.name}`,
+    `Email: ${user.email}`,
+    `Role: ${user.role.role_name}`,
+    `Status: ${user.status}`,
+    `Registered: ${formatRegistrationDate(user.created_at)}`,
+    `Last updated: ${formatRegistrationDate(user.updated_at)}`
+  ].join(" | ");
+  row.after(detailsRow);
+}
+
 async function loadAdminUsers() {
   const body = document.getElementById("adminUsers");
   body.replaceChildren();
@@ -28,7 +50,7 @@ async function loadAdminUsers() {
     if (users.length === 0) {
       const row = body.insertRow();
       const cell = row.insertCell();
-      cell.colSpan = 5;
+      cell.colSpan = 7;
       cell.className = "order-history-state";
       cell.textContent = "No users found.";
       return;
@@ -36,6 +58,7 @@ async function loadAdminUsers() {
 
     users.forEach((user) => {
       const row = body.insertRow();
+      row.insertCell().textContent = user.id;
       row.insertCell().textContent = user.name;
       row.insertCell().textContent = user.email;
 
@@ -52,21 +75,51 @@ async function loadAdminUsers() {
 
       const statusCell = row.insertCell();
       const statusSelect = createSelect(
-        ["active", "inactive", "blocked"].map((status) => ({
-          value: status,
-          text: status
-        })),
+        [
+          { value: "active", text: "Active" },
+          { value: "inactive", text: "Inactive" },
+          { value: "blocked", text: "Blocked" }
+        ],
         user.status,
         `Status for ${user.email}`
       );
       statusCell.append(statusSelect);
+      row.insertCell().textContent = formatRegistrationDate(user.created_at);
 
       const actionCell = row.insertCell();
+      const detailsButton = document.createElement("button");
+      detailsButton.type = "button";
+      detailsButton.className = "btn btn-dark";
+      detailsButton.textContent = "Details";
+      detailsButton.addEventListener("click", async () => {
+        const existingDetailsRow = row.nextElementSibling;
+        if (
+          existingDetailsRow &&
+          existingDetailsRow.dataset.userDetails === String(user.id)
+        ) {
+          existingDetailsRow.remove();
+          detailsButton.textContent = "Details";
+          return;
+        }
+
+        try {
+          const account = await apiRequest(`/admin/users/${user.id}`, {
+            auth: true
+          });
+          appendAccountDetails(row, account);
+          detailsButton.textContent = "Hide details";
+        } catch (error) {
+          showMessage(error.message);
+        }
+      });
+      actionCell.append(detailsButton);
+
       const saveButton = document.createElement("button");
       saveButton.type = "button";
       saveButton.className = "btn btn-primary";
       saveButton.textContent = "Save";
       saveButton.disabled = user.id === currentAdminUserId;
+      saveButton.style.marginLeft = "8px";
       saveButton.addEventListener("click", async () => {
         saveButton.disabled = true;
         try {
@@ -90,7 +143,7 @@ async function loadAdminUsers() {
   } catch (error) {
     const row = body.insertRow();
     const cell = row.insertCell();
-    cell.colSpan = 5;
+    cell.colSpan = 7;
     cell.className = "order-history-state";
     cell.textContent = error.message;
   }
