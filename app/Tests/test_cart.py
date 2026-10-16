@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.core.constants import AvailabilityStatus
+from app.core.constants import AvailabilityStatus, ListingApprovalStatus
 from app.database import Base, get_db
 from app.dependencies.auth import get_current_user
 from app.models import CartItem, Nursery, Plant
@@ -88,6 +88,15 @@ def cart_api():
                 available_quantity=0,
                 availability_status=AvailabilityStatus.FOR_SALE.value,
             ),
+            Plant(
+                nursery_id=nursery.id,
+                name="Pending Orchid",
+                category="Indoor",
+                buy_price=18,
+                available_quantity=2,
+                availability_status=AvailabilityStatus.FOR_SALE.value,
+                approval_status=ListingApprovalStatus.PENDING.value,
+            ),
         ]
         session.add_all(plants)
         session.commit()
@@ -114,6 +123,41 @@ def test_add_cart_item_returns_item_and_plant_details(cart_api):
     assert response.json()["quantity"] == 2
     assert response.json()["plant"]["name"] == "Golden Pothos"
     assert response.json()["plant"]["buy_price"] == 15
+
+
+def test_pending_plant_cannot_be_added_to_cart(cart_api):
+    client, _, plant_ids, _ = cart_api
+
+    response = client.post(
+        "/api/v1/cart/items",
+        json={"plant_id": plant_ids["Pending Orchid"], "quantity": 1},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Plant not found"
+
+
+def test_pending_plant_cannot_remain_in_cart_after_status_change(cart_api):
+    client, _, plant_ids, testing_session = cart_api
+    plant_id = plant_ids["Golden Pothos"]
+    added = client.post(
+        "/api/v1/cart/items",
+        json={"plant_id": plant_id, "quantity": 1},
+    )
+    assert added.status_code == 201
+
+    with testing_session() as session:
+        plant = session.get(Plant, plant_id)
+        plant.approval_status = ListingApprovalStatus.PENDING.value
+        session.commit()
+
+    response = client.patch(
+        f"/api/v1/cart/items/{added.json()['id']}",
+        json={"quantity": 2},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Plant not found"
 
 
 def test_adding_same_plant_increments_quantity(cart_api):

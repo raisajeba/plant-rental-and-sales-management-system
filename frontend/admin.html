@@ -84,6 +84,52 @@
             </table>
           </div>
         </section>
+        <section class="card" aria-labelledby="pendingPlantsHeading" style="margin-top: 24px;">
+          <h2 id="pendingPlantsHeading">Pending plant listings</h2>
+          <p class="page-intro">Review nursery submissions before making them visible to customers.</p>
+          <div style="overflow-x: auto;">
+            <table class="order-history-table">
+              <thead>
+                <tr>
+                  <th scope="col">ID</th>
+                  <th scope="col">Plant</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Nursery</th>
+                  <th scope="col">Owner</th>
+                  <th scope="col">Availability</th>
+                  <th scope="col">Registered</th>
+                  <th scope="col">Review</th>
+                </tr>
+              </thead>
+              <tbody id="pendingPlants">
+                <tr><td class="order-history-state" colspan="8">Loading pending listings...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="plantsHeading" style="margin-top: 24px;">
+          <h2 id="plantsHeading">Plant listings</h2>
+          <p class="page-intro">View all listings and manage approved listing availability.</p>
+          <div style="overflow-x: auto;">
+            <table class="order-history-table">
+              <thead>
+                <tr>
+                  <th scope="col">ID</th>
+                  <th scope="col">Plant</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Nursery</th>
+                  <th scope="col">Approval</th>
+                  <th scope="col">Availability</th>
+                  <th scope="col">Quantity</th>
+                  <th scope="col">Manage</th>
+                </tr>
+              </thead>
+              <tbody id="adminPlants">
+                <tr><td class="order-history-state" colspan="8">Loading plant listings...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </main>
     </div>
   </div>

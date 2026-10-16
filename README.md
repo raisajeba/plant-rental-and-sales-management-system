@@ -31,8 +31,17 @@ account at `/api/v1/admin/nurseries/{id}`, and change its status to `active` or
 Admin panel; inactive nurseries are hidden from customer listings and cannot
 serve their plants.
 
-New public registrations require Admin approval. Before deploying this change
-to an existing database, apply `app/migrations/001_add_user_approval_status.sql`.
-Existing accounts default to approved; new registrations remain pending and
+Admins can review all plant listings at `/api/v1/admin/plants` and pending
+submissions at `/api/v1/admin/plants/pending`. Approve or reject pending
+listings with the corresponding `POST /api/v1/admin/plants/{id}/approve` or
+`POST /api/v1/admin/plants/{id}/reject` endpoint. Approved listing availability
+and quantity can be managed with `PATCH /api/v1/admin/plants/{id}`. Pending and
+rejected listings are not visible to customers.
+
+New public registrations and nursery plant listings require Admin approval.
+Before deploying these changes to an existing database, apply
+`app/migrations/001_add_user_approval_status.sql` and
+`app/migrations/003_add_plant_listing_approval_status.sql`. Existing accounts
+and listings default to approved; new registrations remain pending and
 inactive until an Admin approves them. Rejected accounts remain inactive and
 cannot sign in or access protected API routes.

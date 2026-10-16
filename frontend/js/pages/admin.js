@@ -288,6 +288,170 @@ async function loadAdminNurseries() {
   }
 }
 
+function plantAvailabilityOptions(plant) {
+  return [
+    {
+      value: "available_for_sale",
+      text: "For sale",
+      disabled: plant.approval_status !== "approved"
+    },
+    {
+      value: "available_for_rent",
+      text: "For rent",
+      disabled: plant.approval_status !== "approved"
+    },
+    {
+      value: "available_for_both",
+      text: "For sale and rent",
+      disabled: plant.approval_status !== "approved"
+    },
+    { value: "unavailable", text: "Unavailable" }
+  ];
+}
+
+async function loadPendingPlants() {
+  const body = document.getElementById("pendingPlants");
+  body.replaceChildren();
+
+  try {
+    const plants = await apiRequest("/admin/plants/pending", { auth: true });
+    if (plants.length === 0) {
+      const cell = body.insertRow().insertCell();
+      cell.colSpan = 8;
+      cell.className = "order-history-state";
+      cell.textContent = "No plant listings are awaiting review.";
+      return;
+    }
+
+    plants.forEach((plant) => {
+      const row = body.insertRow();
+      row.insertCell().textContent = plant.id;
+      row.insertCell().textContent = plant.name;
+      row.insertCell().textContent = plant.category;
+      row.insertCell().textContent = plant.nursery_name;
+      row.insertCell().textContent =
+        `${plant.nursery_owner_name} (${plant.nursery_owner_email})`;
+      row.insertCell().textContent = plant.availability_status;
+      row.insertCell().textContent = formatRegistrationDate(plant.created_at);
+
+      const actionCell = row.insertCell();
+      [
+        { action: "approve", label: "Approve", className: "btn-primary" },
+        { action: "reject", label: "Reject", className: "btn-dark" }
+      ].forEach(({ action, label, className }) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `btn ${className}`;
+        button.textContent = label;
+        button.style.marginRight = "8px";
+        button.addEventListener("click", async () => {
+          if (
+            action === "reject" &&
+            !window.confirm(`Reject the listing for ${plant.name}?`)
+          ) {
+            return;
+          }
+          button.disabled = true;
+          try {
+            await apiRequest(`/admin/plants/${plant.id}/${action}`, {
+              method: "POST",
+              auth: true
+            });
+            showMessage(
+              action === "approve"
+                ? "Plant listing approved."
+                : "Plant listing rejected.",
+              "success"
+            );
+            await Promise.all([loadPendingPlants(), loadAdminPlants()]);
+          } catch (error) {
+            showMessage(error.message);
+            button.disabled = false;
+          }
+        });
+        actionCell.append(button);
+      });
+    });
+  } catch (error) {
+    const cell = body.insertRow().insertCell();
+    cell.colSpan = 8;
+    cell.className = "order-history-state";
+    cell.textContent = error.message;
+  }
+}
+
+async function loadAdminPlants() {
+  const body = document.getElementById("adminPlants");
+  body.replaceChildren();
+
+  try {
+    const plants = await apiRequest("/admin/plants", { auth: true });
+    if (plants.length === 0) {
+      const cell = body.insertRow().insertCell();
+      cell.colSpan = 8;
+      cell.className = "order-history-state";
+      cell.textContent = "No plant listings found.";
+      return;
+    }
+
+    plants.forEach((plant) => {
+      const row = body.insertRow();
+      row.insertCell().textContent = plant.id;
+      row.insertCell().textContent = plant.name;
+      row.insertCell().textContent = plant.category;
+      row.insertCell().textContent = plant.nursery_name;
+      row.insertCell().textContent = plant.approval_status;
+
+      const availabilityCell = row.insertCell();
+      const availabilitySelect = createSelect(
+        plantAvailabilityOptions(plant),
+        plant.availability_status,
+        `Availability for ${plant.name}`
+      );
+      availabilityCell.append(availabilitySelect);
+
+      const quantityCell = row.insertCell();
+      const quantityInput = document.createElement("input");
+      quantityInput.type = "number";
+      quantityInput.min = "0";
+      quantityInput.max = "1000000";
+      quantityInput.value = plant.available_quantity;
+      quantityInput.setAttribute("aria-label", `Quantity for ${plant.name}`);
+      quantityCell.append(quantityInput);
+
+      const actionCell = row.insertCell();
+      const saveButton = document.createElement("button");
+      saveButton.type = "button";
+      saveButton.className = "btn btn-primary";
+      saveButton.textContent = "Save";
+      saveButton.addEventListener("click", async () => {
+        saveButton.disabled = true;
+        try {
+          await apiRequest(`/admin/plants/${plant.id}`, {
+            method: "PATCH",
+            body: {
+              availability_status: availabilitySelect.value,
+              available_quantity: Number(quantityInput.value)
+            },
+            auth: true
+          });
+          showMessage("Plant listing updated.", "success");
+          await loadAdminPlants();
+        } catch (error) {
+          showMessage(error.message);
+          saveButton.disabled = false;
+        }
+      });
+      actionCell.append(saveButton);
+    });
+  } catch (error) {
+    const cell = body.insertRow().insertCell();
+    cell.colSpan = 8;
+    cell.className = "order-history-state";
+    cell.textContent = error.message;
+  }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   if (document.body.dataset.page !== "admin") {
     return;
@@ -299,7 +463,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     await Promise.all([
       loadPendingAccounts(),
       loadAdminUsers(),
-      loadAdminNurseries()
+      loadAdminNurseries(),
+      loadPendingPlants(),
+      loadAdminPlants()
     ]);
   } catch (error) {
     showMessage(error.message);
