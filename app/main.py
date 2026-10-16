@@ -21,7 +21,6 @@ from app.routers import (
     nurseries,
     order,  # Added for purchase orders
     pages,
-    placeholders,
     plants,
     rentals,  # Rentals Router Here
     users,
@@ -111,8 +110,6 @@ for r in (
     maintenance.router,
     contact.router,
     about.router,
-    placeholders.rent_router,
-    placeholders.buy_router,
 ):
     app.include_router(r, prefix=settings.API_V1_PREFIX)
 

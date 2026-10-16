@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard | Green Forest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body data-page="dashboard" data-layout="dashboard">
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+
+    <div class="main">
+      <header class="topbar"><h1>Dashboard</h1></header>
+      
+      <div class="content">
+        <!-- Shows errors / success messages via showMessage() from app.js -->
+        <div id="message" class="alert hidden"></div>
+
+        <!-- Welcome Banner -->
+        <section class="banner" style="display: flex; justify-content: space-between; align-items: center; background: #e6f4ea; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
+          <div>
+            <h2 style="color: #137333; margin-bottom: 0.25rem;">Welcome back, Jeba! 🌿</h2>
+            <p style="color: #5f6368; margin: 0;">Manage your purchases, rentals and plant care from one place.</p>
+          </div>
+          <div style="font-size: 2.5rem; color: #137333;">🌱</div>
+        </section>
+
+        <!-- Stats Grid Cards with Icons -->
+        <div class="grid-4" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+          <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="background: #e6f4ea; padding: 0.75rem; border-radius: 8px; font-size: 1.25rem;">📦</div>
+            <div>
+              <h3 style="margin: 0; font-size: 1.5rem;">5</h3>
+              <p style="margin: 0; color: #666; font-size: 0.9rem;">My Orders</p>
+            </div>
+          </div>
+          <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="background: #e6f4ea; padding: 0.75rem; border-radius: 8px; font-size: 1.25rem;">🌿</div>
+            <div>
+              <h3 style="margin: 0; font-size: 1.5rem;">2</h3>
+              <p style="margin: 0; color: #666; font-size: 0.9rem;">Active Rentals</p>
+            </div>
+          </div>
+          <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="background: #e6f4ea; padding: 0.75rem; border-radius: 8px; font-size: 1.25rem;">💧</div>
+            <div>
+              <h3 style="margin: 0; font-size: 1.5rem;">3</h3>
+              <p style="margin: 0; color: #666; font-size: 0.9rem;">Upcoming Maintenance</p>
+            </div>
+          </div>
+          <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="background: #e6f4ea; padding: 0.75rem; border-radius: 8px; font-size: 1.25rem;">✅</div>
+            <div>
+              <h3 style="margin: 0; font-size: 1.5rem;">4</h3>
+              <p style="margin: 0; color: #666; font-size: 0.9rem;">Completed Rentals</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Dashboard Content Grid -->
+        <div class="grid-2" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+          
+          <!-- Left Column: Orders & Rentals -->
+          <div>
+            <section class="card" style="margin-bottom: 1.5rem; padding: 1.25rem;">
+              <h3 style="margin-bottom: 1rem;">My Recent Orders</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="text-align: left; border-bottom: 1px solid #eaeaea; color: #666; font-size: 0.9rem;">
+                    <th style="padding: 0.5rem;">Order ID</th>
+                    <th style="padding: 0.5rem;">Plant</th>
+                    <th style="padding: 0.5rem;">Type</th>
+                    <th style="padding: 0.5rem;">Date</th>
+                    <th style="padding: 0.5rem;">Amount</th>
+                    <th style="padding: 0.5rem;">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style="border-bottom: 1px solid #f2f2f2;">
+                    <td style="padding: 0.75rem 0.5rem; font-weight: 600;">ORD-1024</td>
+                    <td style="padding: 0.75rem 0.5rem;">Snake Plant</td>
+                    <td style="padding: 0.75rem 0.5rem;">Buy</td>
+                    <td style="padding: 0.75rem 0.5rem;">23 Sep 2026</td>
+                    <td style="padding: 0.75rem 0.5rem;">৳1,200</td>
+                    <td style="padding: 0.75rem 0.5rem;"><span class="badge" style="background: #e6f4ea; color: #137333; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">Completed</span></td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 0.75rem 0.5rem; font-weight: 600;">ORD-1025</td>
+                    <td style="padding: 0.75rem 0.5rem;">Areca Palm</td>
+                    <td style="padding: 0.75rem 0.5rem;">Buy</td>
+                    <td style="padding: 0.75rem 0.5rem;">22 Sep 2026</td>
+                    <td style="padding: 0.75rem 0.5rem;">৳1,600</td>
+                    <td style="padding: 0.75rem 0.5rem;"><span class="badge" style="background: #fef7e0; color: #b06000; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">Confirmed</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+
+            <!-- My Active Rentals Section (Matching Figma) -->
+            <section class="card" style="padding: 1.25rem;">
+              <h3 style="margin-bottom: 1rem;">My Active Rentals</h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div style="border: 1px solid #eaeaea; border-radius: 8px; padding: 0.75rem; display: flex; gap: 0.75rem; align-items: center;">
+                  <div style="width: 60px; height: 60px; background: #f2f2f2; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">🪴</div>
+                  <div>
+                    <strong style="font-size: 0.95rem;">Areca Palm</strong>
+                    <p style="margin: 0.2rem 0; font-size: 0.75rem; color: #666;">20 Sep 2026 – 30 Sep</p>
+                    <span style="background: #e6f4ea; color: #137333; font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 4px;">Active</span>
+                  </div>
+                </div>
+                <div style="border: 1px solid #eaeaea; border-radius: 8px; padding: 0.75rem; display: flex; gap: 0.75rem; align-items: center;">
+                  <div style="width: 60px; height: 60px; background: #f2f2f2; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">🌿</div>
+                  <div>
+                    <strong style="font-size: 0.95rem;">Monstera</strong>
+                    <p style="margin: 0.2rem 0; font-size: 0.75rem; color: #666;">18 Sep 2026 – 18 Oct</p>
+                    <span style="background: #e6f4ea; color: #137333; font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 4px;">Active</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <!-- Right Column: Upcoming Maintenance -->
+          <div>
+            <section class="card" style="padding: 1.25rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="margin: 0;">Upcoming Maintenance</h3>
+                <span>🌱</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <div style="padding: 0.75rem; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #f9ab00;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong style="font-size: 0.9rem;">Areca Palm 💧</strong>
+                    <span style="background: #fef7e0; color: #b06000; font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 4px;">Pending</span>
+                  </div>
+                  <p style="margin: 0.3rem 0 0 0; font-size: 0.8rem; color: #666;">💧 Watering Task · Due: 24 Sep</p>
+                </div>
+                
+                <div style="padding: 0.75rem; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #1a73e8;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong style="font-size: 0.9rem;">Snake Plant 💧</strong>
+                    <span style="background: #e8f0fe; color: #1967d2; font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 4px;">Upcoming</span>
+                  </div>
+                  <p style="margin: 0.3rem 0 0 0; font-size: 0.8rem; color: #666;">💧 Watering Task · Due: 26 Sep</p>
+                </div>
+
+                <div style="padding: 0.75rem; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #1a73e8;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong style="font-size: 0.9rem;">Monstera 🛍️</strong>
+                    <span style="background: #e8f0fe; color: #1967d2; font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 4px;">Upcoming</span>
+                  </div>
+                  <p style="margin: 0.3rem 0 0 0; font-size: 0.8rem; color: #666;">🌾 Fertilizing Task · Due: 29 Sep</p>
+                </div>
+              </div>
+              <button style="width: 100%; margin-top: 1rem; background: #0d3b1e; color: #fff; border: none; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer;">View All Maintenance</button>
+            </section>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/pages/dashboard.js"></script>
+</body>
+</html>

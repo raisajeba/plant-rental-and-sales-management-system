@@ -40,7 +40,8 @@ def cart_api():
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
-        id=current_user_id["value"]
+        id=current_user_id["value"],
+        role=SimpleNamespace(role_name="User"),
     )
 
     with testing_session() as session:

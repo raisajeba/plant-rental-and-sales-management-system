@@ -21,7 +21,96 @@ router = APIRouter(
 @router.post("/checkout", response_model=OrderOut, status_code=status.HTTP_201_CREATED)
 def checkout_cart(
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(require_roles(RoleName.USER))
+):
+    return create_purchase_order_from_cart(db=db, user_id=current_user.id)
+
+
+def _owner_order_query(owner_id: int):
+    return (
+        select(Order, User.name)
+        .join(User, User.id == Order.user_id)
+        .options(
+            joinedload(Order.items)
+            .joinedload(OrderItem.plant)
+            .joinedload(Plant.nursery)
+        )
+        .where(
+            Order.items.any(
+                OrderItem.plant.has(
+                    Plant.nursery.has(Nursery.owner_id == owner_id)
+                )
+            )
+        )
+    )
+
+
+def _owner_order_output(
+    order: Order,
+    customer_name: str,
+    owner_id: int,
+) -> OwnerOrderOut:
+    owner_items = [
+        item
+        for item in order.items
+        if item.plant.nursery.owner_id == owner_id
+    ]
+    return OwnerOrderOut(
+        id=order.id,
+        customer_name=customer_name,
+        total_price=sum(item.total_price for item in owner_items),
+        status=order.status,
+        order_date=order.created_at,
+        items=[
+            OwnerOrderItemOut(
+                plant_id=item.plant_id,
+                plant_name=item.plant.name,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                total_price=item.total_price,
+            )
+            for item in owner_items
+        ],
+    )
+
+
+@router.get("/owner", response_model=list[OwnerOrderOut])
+def list_owner_orders(
+    current_user: User = Depends(require_roles(RoleName.NURSERY)),
+    db: Session = Depends(get_db),
+):
+    rows = db.execute(
+        _owner_order_query(current_user.id).order_by(
+            Order.created_at.desc(), Order.id.desc()
+        )
+    ).unique().all()
+    return [
+        _owner_order_output(order, customer_name, current_user.id)
+        for order, customer_name in rows
+    ]
+
+
+@router.get("/owner/{order_id}", response_model=OwnerOrderOut)
+def get_owner_order(
+    order_id: int,
+    current_user: User = Depends(require_roles(RoleName.NURSERY)),
+    db: Session = Depends(get_db),
+):
+    row = db.execute(
+        _owner_order_query(current_user.id).where(Order.id == order_id)
+    ).unique().first()
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found")
+    order, customer_name = row
+    return _owner_order_output(order, customer_name, current_user.id)
+
+
+@router.patch("/owner/{order_id}/status", response_model=OwnerOrderOut)
+def update_owner_order_status(
+    order_id: int,
+    payload: OrderStatusUpdate,
+    current_user: User = Depends(require_roles(RoleName.NURSERY)),
+    db: Session = Depends(get_db),
 ):
     return create_purchase_order_from_cart(db=db, user_id=current_user.id)
 

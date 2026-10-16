@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Purchase History | Green Forest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body data-page="customer-history" data-layout="dashboard">
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+
+    <div class="main">
+      <header class="topbar">
+        <h1>Purchase History</h1>
+      </header>
+      <div class="content">
+        <div id="message" class="alert hidden"></div>
+        <section class="card" style="padding: 1.5rem; overflow-x: auto;">
+          <p class="page-intro">Review your plant purchases and rentals.</p>
+          <table class="order-history-table">
+            <thead>
+              <tr>
+                <th scope="col">Order</th>
+                <th scope="col">Type</th>
+                <th scope="col">Plants</th>
+                <th scope="col">Total</th>
+                <th scope="col">Order date</th>
+                <th scope="col">Status</th>
+                <th scope="col">Details</th>
+              </tr>
+            </thead>
+            <tbody id="orderHistoryBody">
+              <tr><td colspan="7" class="order-history-state">Loading your history...</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/pages/customer-history.js"></script>
+</body>
+</html>
