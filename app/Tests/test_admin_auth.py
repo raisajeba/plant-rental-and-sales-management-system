@@ -6,13 +6,18 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.config import settings
-from app.core.constants import RoleName
+from app.core.constants import (
+    AvailabilityStatus,
+    ListingApprovalStatus,
+    RoleName,
+)
 from app.core.security import create_access_token, hash_password, verify_password
 from app.database import Base, get_db
-from app.models import Nursery, Role, User
+from app.models import Nursery, Plant, Role, User
 from app.routers.admin import router as admin_router
 from app.routers.auth import router as auth_router
 from app.routers.nurseries import router as nurseries_router
+from app.routers.plants import router as plants_router
 from app.routers.users import router as users_router
 from app.seed import seed_initial_data
 
@@ -59,6 +64,7 @@ def admin_api(admin_db_session, monkeypatch):
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(admin_router, prefix="/api/v1")
     app.include_router(nurseries_router, prefix="/api/v1")
+    app.include_router(plants_router, prefix="/api/v1")
     app.include_router(users_router, prefix="/api/v1")
     app.dependency_overrides[get_db] = lambda: admin_db_session
 
@@ -413,6 +419,245 @@ def test_admin_can_list_view_and_update_nursery_status(admin_api):
         json={"status": "active"},
     )
     assert missing_update.status_code == 404
+
+
+def test_admin_can_review_and_manage_plant_listings(admin_api):
+    client, admin, customer, db_session = admin_api
+    nursery = Nursery(
+        owner_id=customer.id,
+        name="Listing Test Nursery",
+        address="12 Garden Road",
+        city="Dhaka",
+        phone="+8801712345678",
+    )
+    db_session.add(nursery)
+    db_session.flush()
+    pending_plant = Plant(
+        nursery_id=nursery.id,
+        name="Pending Plant",
+        category="Indoor",
+        buy_price=25,
+        available_quantity=4,
+        availability_status=AvailabilityStatus.FOR_SALE.value,
+        approval_status=ListingApprovalStatus.PENDING.value,
+    )
+    rejected_plant = Plant(
+        nursery_id=nursery.id,
+        name="Rejected Plant",
+        category="Indoor",
+        buy_price=15,
+        available_quantity=2,
+        availability_status=AvailabilityStatus.FOR_SALE.value,
+        approval_status=ListingApprovalStatus.PENDING.value,
+    )
+    invalid_plant = Plant(
+        nursery_id=nursery.id,
+        name="Invalid Plant",
+        category="Indoor",
+        available_quantity=2,
+        availability_status=AvailabilityStatus.FOR_SALE.value,
+        approval_status=ListingApprovalStatus.PENDING.value,
+    )
+    db_session.add_all([pending_plant, rejected_plant, invalid_plant])
+    db_session.commit()
+
+    admin_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": admin.email, "password": "AdminPassword123"},
+    )
+    admin_headers = {
+        "Authorization": f"Bearer {admin_login.json()['access_token']}"
+    }
+    customer_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": customer.email, "password": "CustomerPassword123"},
+    )
+    customer_headers = {
+        "Authorization": f"Bearer {customer_login.json()['access_token']}"
+    }
+
+    assert client.get("/api/v1/admin/plants").status_code == 401
+    assert client.get("/api/v1/admin/plants/pending").status_code == 401
+    assert client.post(
+        f"/api/v1/admin/plants/{pending_plant.id}/approve"
+    ).status_code == 401
+    assert client.patch(
+        f"/api/v1/admin/plants/{pending_plant.id}",
+        json={"availability_status": "available_for_sale"},
+    ).status_code == 401
+    assert client.get(
+        "/api/v1/admin/plants", headers=customer_headers
+    ).status_code == 403
+    assert client.post(
+        f"/api/v1/admin/plants/{pending_plant.id}/approve",
+        headers=customer_headers,
+    ).status_code == 403
+
+    pending_list = client.get(
+        "/api/v1/admin/plants/pending", headers=admin_headers
+    )
+    assert pending_list.status_code == 200
+    assert {plant["id"] for plant in pending_list.json()} == {
+        pending_plant.id,
+        rejected_plant.id,
+        invalid_plant.id,
+    }
+    assert pending_list.json()[0]["nursery_name"] == nursery.name
+    assert pending_list.json()[0]["nursery_owner_email"] == customer.email
+    assert pending_list.json()[0]["approval_status"] == "pending"
+
+    pending_detail = client.get(
+        f"/api/v1/admin/plants/{pending_plant.id}", headers=admin_headers
+    )
+    assert pending_detail.status_code == 200
+    assert pending_detail.json()["name"] == pending_plant.name
+
+    hidden_publicly = client.get(
+        "/api/v1/plants/search",
+        params={"name": "Pending Plant"},
+        headers=customer_headers,
+    )
+    assert hidden_publicly.status_code == 200
+    assert hidden_publicly.json() == []
+
+    approved = client.post(
+        f"/api/v1/admin/plants/{pending_plant.id}/approve",
+        headers=admin_headers,
+    )
+    assert approved.status_code == 200
+    assert approved.json()["approval_status"] == "approved"
+    publicly_visible = client.get(
+        "/api/v1/plants/search",
+        params={"name": "Pending Plant"},
+        headers=customer_headers,
+    )
+    assert [plant["name"] for plant in publicly_visible.json()] == [
+        "Pending Plant"
+    ]
+
+    availability_update = client.patch(
+        f"/api/v1/admin/plants/{pending_plant.id}",
+        headers=admin_headers,
+        json={"availability_status": "unavailable", "available_quantity": 0},
+    )
+    assert availability_update.status_code == 200
+    assert availability_update.json()["availability_status"] == "unavailable"
+    assert availability_update.json()["available_quantity"] == 0
+    db_session.refresh(pending_plant)
+    assert pending_plant.availability_status == "unavailable"
+
+    invalid_update = client.patch(
+        f"/api/v1/admin/plants/{pending_plant.id}",
+        headers=admin_headers,
+        json={"availability_status": "listed"},
+    )
+    assert invalid_update.status_code == 422
+    missing = client.get("/api/v1/admin/plants/99999", headers=admin_headers)
+    assert missing.status_code == 404
+    missing_update = client.patch(
+        "/api/v1/admin/plants/99999",
+        headers=admin_headers,
+        json={"availability_status": "unavailable"},
+    )
+    assert missing_update.status_code == 404
+
+    rejected = client.post(
+        f"/api/v1/admin/plants/{rejected_plant.id}/reject",
+        headers=admin_headers,
+    )
+    assert rejected.status_code == 200
+    assert rejected.json()["approval_status"] == "rejected"
+    assert rejected.json()["availability_status"] == "unavailable"
+    pending_after_decisions = client.get(
+        "/api/v1/admin/plants/pending", headers=admin_headers
+    )
+    assert [plant["id"] for plant in pending_after_decisions.json()] == [
+        invalid_plant.id
+    ]
+    invalid_approval = client.post(
+        f"/api/v1/admin/plants/{invalid_plant.id}/approve",
+        headers=admin_headers,
+    )
+    assert invalid_approval.status_code == 422
+    assert client.get(
+        "/api/v1/admin/plants/pending", headers=admin_headers
+    ).json()[0]["id"] == invalid_plant.id
+    repeated_approval = client.post(
+        f"/api/v1/admin/plants/{rejected_plant.id}/approve",
+        headers=admin_headers,
+    )
+    assert repeated_approval.status_code == 409
+    assert client.get(
+        "/api/v1/plants/{}".format(rejected_plant.id),
+        headers=customer_headers,
+    ).status_code == 404
+
+
+def test_new_nursery_plant_submissions_are_pending_until_reviewed(admin_api):
+    client, _, customer, db_session = admin_api
+    nursery_role = db_session.scalar(
+        select(Role).where(Role.role_name == RoleName.NURSERY.value)
+    )
+    nursery_owner = User(
+        name="Nursery Owner",
+        email="plant-owner@example.com",
+        password=hash_password("PlantOwnerPassword123"),
+        role_id=nursery_role.id,
+    )
+    db_session.add(nursery_owner)
+    db_session.flush()
+    nursery = Nursery(
+        owner_id=nursery_owner.id,
+        name="New Listing Nursery",
+        address="12 Garden Road",
+        city="Dhaka",
+        phone="+8801712345678",
+    )
+    db_session.add(nursery)
+    db_session.commit()
+
+    owner_login = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": nursery_owner.email,
+            "password": "PlantOwnerPassword123",
+        },
+    )
+    owner_headers = {
+        "Authorization": f"Bearer {owner_login.json()['access_token']}"
+    }
+    create_response = client.post(
+        f"/api/v1/nurseries/{nursery.id}/plants",
+        headers=owner_headers,
+        json={
+            "name": "Fresh Submission",
+            "category": "Indoor",
+            "buy_price": 20,
+            "available_quantity": 3,
+            "availability_status": "available_for_sale",
+        },
+    )
+    assert create_response.status_code == 201
+    assert create_response.json()["approval_status"] == "pending"
+
+    owner_list = client.get("/api/v1/nurseries/mine/plants", headers=owner_headers)
+    assert len(owner_list.json()) == 1
+    assert owner_list.json()[0]["approval_status"] == "pending"
+
+    customer_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": customer.email, "password": "CustomerPassword123"},
+    )
+    customer_headers = {
+        "Authorization": f"Bearer {customer_login.json()['access_token']}"
+    }
+    public_search = client.get(
+        "/api/v1/plants/search",
+        params={"name": "Fresh Submission"},
+        headers=customer_headers,
+    )
+    assert public_search.status_code == 200
+    assert public_search.json() == []
 
 
 def test_admin_bootstrap_is_hashed_idempotent_and_never_promotes(

@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
+from app.core.constants import ListingApprovalStatus
 from app.models.plant import Plant
 from app.models.cart_item import CartItem
 from app.models.order import Order, OrderItem, RentalOrder
@@ -23,6 +24,11 @@ def create_purchase_order_from_cart(db: Session, user_id: int) -> Order:
         plant = db.query(Plant).filter(Plant.id == cart_item.plant_id).with_for_update().first()
         
         if not plant:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Plant with ID {cart_item.plant_id} not found."
+            )
+        if plant.approval_status != ListingApprovalStatus.APPROVED.value:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Plant with ID {cart_item.plant_id} not found."
@@ -96,7 +102,11 @@ def create_rental_order(
         .with_for_update()
         .first()
     )
-    if plant is None or plant.nursery.status != "active":
+    if (
+        plant is None
+        or plant.approval_status != ListingApprovalStatus.APPROVED.value
+        or plant.nursery.status != "active"
+    ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Plant not found",

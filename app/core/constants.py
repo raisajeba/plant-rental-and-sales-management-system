@@ -30,6 +30,12 @@ class NurseryStatus(str, Enum):
     INACTIVE = "inactive"
 
 
+class ListingApprovalStatus(str, Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
 class MaintenanceTask(str, Enum):
     WATERING = "watering"
     FERTILIZING = "fertilizing"
