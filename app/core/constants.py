@@ -47,13 +47,26 @@ class AvailabilityStatus(str, Enum):
     FOR_BOTH = "available_for_both"
     UNAVAILABLE = "unavailable"
 
-# The user dashboard menu, in display order.
+# The customer and nursery menus, in display order.
 # (page_name, page_url, description)
-# The page_url values must match MENU_ROUTES in the frontend js/layout.js.
+# The page_url values must match the role-specific routes in frontend/js/layout.js.
 MENU_PAGES: list[tuple[str, str, str]] = [
     ("Dashboard", "/dashboard", "User dashboard"),
-    ("Buy Plants", "/buy", "Browse plants available to buy"),
-    ("Rent Plants", "/rent", "Browse plants available to rent"),
+    ("Buy", "/buy", "Browse plants available to buy"),
+    ("Rent", "/rent", "Browse plants available to rent"),
+    ("Purchase History", "/customer-history", "View purchase and rental history"),
     ("Maintenance", "/maintenance", "Care schedule and maintenance requests"),
-    ("My Profile", "/profile", "Manage your account details"),
+    ("Profile", "/profile", "Manage your account details"),
 ]
+
+NURSERY_MENU_PAGES: list[tuple[str, str, str]] = [
+    ("Nursery Dashboard", "/nursery-dashboard", "Nursery management overview"),
+    ("My Plants", "/my-plants", "Manage your nursery plant listings"),
+    ("Add Plant", "/add-plant", "Add a plant to your nursery"),
+    ("Sell Orders", "/sell-orders", "Manage plant sales"),
+    ("Rent Orders", "/rent-orders", "Manage plant rentals"),
+    ("Nursery Maintenance", "/nursery-maintenance", "Manage maintenance requests"),
+    ("Nursery Profile", "/nursery-profile", "Manage your nursery profile"),
+]
+
+ALL_MENU_PAGES = MENU_PAGES + NURSERY_MENU_PAGES
