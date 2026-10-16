@@ -24,3 +24,9 @@ than promote an existing non-admin account or replace an existing password.
 Admin users sign in through the regular login page and are directed to
 `admin.html`. Admin API routes require a valid bearer token and the active
 Admin role; logging out revokes the current token.
+
+New public registrations require Admin approval. Before deploying this change
+to an existing database, apply `app/migrations/001_add_user_approval_status.sql`.
+Existing accounts default to approved; new registrations remain pending and
+inactive until an Admin approves them. Rejected accounts remain inactive and
+cannot sign in or access protected API routes.

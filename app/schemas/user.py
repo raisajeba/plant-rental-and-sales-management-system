@@ -13,7 +13,7 @@ from pydantic import (
     model_validator,
 )
 
-from app.core.constants import UserStatus
+from app.core.constants import ApprovalStatus, UserStatus
 
 
 class RoleOut(BaseModel):
@@ -110,6 +110,7 @@ class UserOut(BaseModel):
     name: str
     email: EmailStr
     status: str
+    approval_status: ApprovalStatus
     role: RoleOut
 
     # Profile picture URL/path

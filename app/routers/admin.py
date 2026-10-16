@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.constants import RoleName
+from app.core.constants import ApprovalStatus, RoleName, UserStatus
 from app.database import get_db
 from app.dependencies.auth import require_roles
 from app.models import Page, Role, RolePage, User
@@ -27,12 +27,63 @@ def list_users(
     return db.scalars(select(User).order_by(User.id).offset(skip).limit(limit)).all()
 
 
+@router.get("/users/pending", response_model=list[UserOut])
+def list_pending_users(db: Session = Depends(get_db)):
+    return db.scalars(
+        select(User)
+        .where(User.approval_status == ApprovalStatus.PENDING.value)
+        .order_by(User.created_at, User.id)
+    ).all()
+
+
 @router.get("/users/{user_id}", response_model=UserOut)
 def get_user(user_id: int, db: Session = Depends(get_db)):
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
     return user
+
+
+def _set_account_approval(
+    user_id: int,
+    approval_status: ApprovalStatus,
+    account_status: UserStatus,
+    db: Session,
+) -> User:
+    user = db.scalar(select(User).where(User.id == user_id).with_for_update())
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    if user.approval_status != ApprovalStatus.PENDING.value:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Only pending accounts can be approved or rejected",
+        )
+
+    user.approval_status = approval_status.value
+    user.status = account_status.value
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@router.post("/users/{user_id}/approve", response_model=UserOut)
+def approve_user(user_id: int, db: Session = Depends(get_db)):
+    return _set_account_approval(
+        user_id,
+        ApprovalStatus.APPROVED,
+        UserStatus.ACTIVE,
+        db,
+    )
+
+
+@router.post("/users/{user_id}/reject", response_model=UserOut)
+def reject_user(user_id: int, db: Session = Depends(get_db)):
+    return _set_account_approval(
+        user_id,
+        ApprovalStatus.REJECTED,
+        UserStatus.INACTIVE,
+        db,
+    )
 
 
 @router.patch("/users/{user_id}", response_model=UserOut)
@@ -53,6 +104,14 @@ def update_user(
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Role not found")
         user.role_id = payload.role_id
     if payload.status is not None:
+        if (
+            payload.status == UserStatus.ACTIVE
+            and user.approval_status != ApprovalStatus.APPROVED.value
+        ):
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "Account must be approved before it can be activated",
+            )
         user.status = payload.status.value
 
     db.commit()

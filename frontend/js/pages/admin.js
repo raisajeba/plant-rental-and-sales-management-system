@@ -4,11 +4,12 @@ function createSelect(options, selectedValue, label) {
   const select = document.createElement("select");
   select.setAttribute("aria-label", label);
 
-  options.forEach(({ value, text }) => {
+  options.forEach(({ value, text, disabled = false }) => {
     const option = document.createElement("option");
     option.value = value;
     option.textContent = text;
     option.selected = value === selectedValue;
+    option.disabled = disabled;
     select.append(option);
   });
 
@@ -23,7 +24,7 @@ function appendAccountDetails(row, user) {
   const detailsRow = document.createElement("tr");
   detailsRow.dataset.userDetails = String(user.id);
   const cell = detailsRow.insertCell();
-  cell.colSpan = 7;
+  cell.colSpan = 8;
   cell.className = "order-history-state";
   cell.textContent = [
     `User ID: ${user.id}`,
@@ -31,6 +32,7 @@ function appendAccountDetails(row, user) {
     `Email: ${user.email}`,
     `Role: ${user.role.role_name}`,
     `Status: ${user.status}`,
+    `Approval: ${user.approval_status}`,
     `Registered: ${formatRegistrationDate(user.created_at)}`,
     `Last updated: ${formatRegistrationDate(user.updated_at)}`
   ].join(" | ");
@@ -50,7 +52,7 @@ async function loadAdminUsers() {
     if (users.length === 0) {
       const row = body.insertRow();
       const cell = row.insertCell();
-      cell.colSpan = 7;
+      cell.colSpan = 8;
       cell.className = "order-history-state";
       cell.textContent = "No users found.";
       return;
@@ -76,7 +78,11 @@ async function loadAdminUsers() {
       const statusCell = row.insertCell();
       const statusSelect = createSelect(
         [
-          { value: "active", text: "Active" },
+          {
+            value: "active",
+            text: "Active",
+            disabled: user.approval_status !== "approved"
+          },
           { value: "inactive", text: "Inactive" },
           { value: "blocked", text: "Blocked" }
         ],
@@ -84,6 +90,7 @@ async function loadAdminUsers() {
         `Status for ${user.email}`
       );
       statusCell.append(statusSelect);
+      row.insertCell().textContent = user.approval_status;
       row.insertCell().textContent = formatRegistrationDate(user.created_at);
 
       const actionCell = row.insertCell();
@@ -143,7 +150,75 @@ async function loadAdminUsers() {
   } catch (error) {
     const row = body.insertRow();
     const cell = row.insertCell();
-    cell.colSpan = 7;
+    cell.colSpan = 8;
+    cell.className = "order-history-state";
+    cell.textContent = error.message;
+  }
+}
+
+async function loadPendingAccounts() {
+  const body = document.getElementById("pendingAccounts");
+  body.replaceChildren();
+
+  try {
+    const users = await apiRequest("/admin/users/pending", { auth: true });
+    if (users.length === 0) {
+      const cell = body.insertRow().insertCell();
+      cell.colSpan = 6;
+      cell.className = "order-history-state";
+      cell.textContent = "No accounts are awaiting approval.";
+      return;
+    }
+
+    users.forEach((user) => {
+      const row = body.insertRow();
+      row.insertCell().textContent = user.id;
+      row.insertCell().textContent = user.name;
+      row.insertCell().textContent = user.email;
+      row.insertCell().textContent = user.role.role_name;
+      row.insertCell().textContent = formatRegistrationDate(user.created_at);
+
+      const actionCell = row.insertCell();
+      [
+        { action: "approve", label: "Approve", className: "btn-primary" },
+        { action: "reject", label: "Reject", className: "btn-dark" }
+      ].forEach(({ action, label, className }) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `btn ${className}`;
+        button.textContent = label;
+        button.style.marginRight = "8px";
+        button.addEventListener("click", async () => {
+          if (
+            action === "reject" &&
+            !window.confirm(`Reject the account for ${user.email}?`)
+          ) {
+            return;
+          }
+          button.disabled = true;
+          try {
+            await apiRequest(`/admin/users/${user.id}/${action}`, {
+              method: "POST",
+              auth: true
+            });
+            showMessage(
+              action === "approve"
+                ? "Account approved and activated."
+                : "Account rejected.",
+              "success"
+            );
+            await Promise.all([loadPendingAccounts(), loadAdminUsers()]);
+          } catch (error) {
+            showMessage(error.message);
+            button.disabled = false;
+          }
+        });
+        actionCell.append(button);
+      });
+    });
+  } catch (error) {
+    const cell = body.insertRow().insertCell();
+    cell.colSpan = 6;
     cell.className = "order-history-state";
     cell.textContent = error.message;
   }
@@ -157,7 +232,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     const currentUser = await apiRequest("/users/me", { auth: true });
     currentAdminUserId = currentUser.id;
-    await loadAdminUsers();
+    await Promise.all([loadPendingAccounts(), loadAdminUsers()]);
   } catch (error) {
     showMessage(error.message);
   }
