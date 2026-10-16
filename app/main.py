@@ -23,6 +23,7 @@ from app.routers import (
     pages,
     placeholders,
     plants,
+    rentals,  # Rentals Router Here
     users,
 )
 from app.seed import seed_initial_data
@@ -104,7 +105,8 @@ for r in (
     nurseries.router,
     plants.router,
     cart.router,
-    order.router,  # Added order router
+    order.router,
+    rentals.router,  # <--- rentals.router অন্তর্ভুক্ত করা হলো
     pages.router,
     maintenance.router,
     contact.router,

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 from datetime import date
 from enum import Enum
 
@@ -18,13 +18,12 @@ class PlantRentalOrderCreate(BaseModel):
     rental_end_date: date
     rental_price_per_day: float = Field(..., gt=0, description="Price must be positive")
 
-    @root_validator(pre=False)
-    def validate_dates(cls, values):
-        start = values.get("rental_start_date")
-        end = values.get("rental_end_date")
-        if start and end and end < start:
-            raise ValueError("rental_end_date cannot be earlier than rental_start_date")
-        return values
+    @model_validator(mode="after")
+    def validate_dates(self):
+        if self.rental_start_date and self.rental_end_date:
+            if self.rental_end_date < self.rental_start_date:
+                raise ValueError("rental_end_date cannot be earlier than rental_start_date")
+        return self
 
 # API Response Schema
 class PlantRentalOrderResponse(BaseModel):
@@ -39,5 +38,4 @@ class PlantRentalOrderResponse(BaseModel):
     total_amount: float
     status: RentalStatusEnum
 
-    class Config:
-        from_attributes = True  # Pydantic v2-এর জন্য (Pydantic v1 হলে orm_mode = True লিখবেন)
+    model_config = ConfigDict(from_attributes=True)
