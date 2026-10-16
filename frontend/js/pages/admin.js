@@ -224,6 +224,70 @@ async function loadPendingAccounts() {
   }
 }
 
+async function loadAdminNurseries() {
+  const body = document.getElementById("adminNurseries");
+  body.replaceChildren();
+
+  try {
+    const nurseries = await apiRequest("/admin/nurseries", { auth: true });
+    if (nurseries.length === 0) {
+      const cell = body.insertRow().insertCell();
+      cell.colSpan = 8;
+      cell.className = "order-history-state";
+      cell.textContent = "No nursery accounts found.";
+      return;
+    }
+
+    nurseries.forEach((nursery) => {
+      const row = body.insertRow();
+      row.insertCell().textContent = nursery.id;
+      row.insertCell().textContent = nursery.name;
+      row.insertCell().textContent = nursery.owner.name;
+      row.insertCell().textContent = nursery.email || nursery.owner.email;
+      row.insertCell().textContent = nursery.phone;
+      row.insertCell().textContent = nursery.city;
+
+      const statusCell = row.insertCell();
+      const statusSelect = createSelect(
+        [
+          { value: "active", text: "Active" },
+          { value: "inactive", text: "Inactive" }
+        ],
+        nursery.status,
+        `Status for nursery ${nursery.name}`
+      );
+      statusCell.append(statusSelect);
+
+      const actionCell = row.insertCell();
+      const saveButton = document.createElement("button");
+      saveButton.type = "button";
+      saveButton.className = "btn btn-primary";
+      saveButton.textContent = "Save";
+      saveButton.addEventListener("click", async () => {
+        saveButton.disabled = true;
+        try {
+          await apiRequest(`/admin/nurseries/${nursery.id}`, {
+            method: "PATCH",
+            body: { status: statusSelect.value },
+            auth: true
+          });
+          showMessage("Nursery status updated.", "success");
+          await loadAdminNurseries();
+        } catch (error) {
+          showMessage(error.message);
+          saveButton.disabled = false;
+        }
+      });
+      actionCell.append(saveButton);
+    });
+  } catch (error) {
+    const cell = body.insertRow().insertCell();
+    cell.colSpan = 8;
+    cell.className = "order-history-state";
+    cell.textContent = error.message;
+  }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   if (document.body.dataset.page !== "admin") {
     return;
@@ -232,7 +296,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     const currentUser = await apiRequest("/users/me", { auth: true });
     currentAdminUserId = currentUser.id;
-    await Promise.all([loadPendingAccounts(), loadAdminUsers()]);
+    await Promise.all([
+      loadPendingAccounts(),
+      loadAdminUsers(),
+      loadAdminNurseries()
+    ]);
   } catch (error) {
     showMessage(error.message);
   }
