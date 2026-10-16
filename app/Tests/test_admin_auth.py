@@ -9,9 +9,10 @@ from app.core.config import settings
 from app.core.constants import RoleName
 from app.core.security import create_access_token, hash_password, verify_password
 from app.database import Base, get_db
-from app.models import Role, User
+from app.models import Nursery, Role, User
 from app.routers.admin import router as admin_router
 from app.routers.auth import router as auth_router
+from app.routers.nurseries import router as nurseries_router
 from app.routers.users import router as users_router
 from app.seed import seed_initial_data
 
@@ -57,6 +58,7 @@ def admin_api(admin_db_session, monkeypatch):
     app = FastAPI()
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(admin_router, prefix="/api/v1")
+    app.include_router(nurseries_router, prefix="/api/v1")
     app.include_router(users_router, prefix="/api/v1")
     app.dependency_overrides[get_db] = lambda: admin_db_session
 
@@ -319,6 +321,98 @@ def test_registration_waits_for_admin_approval_and_rejection_blocks_access(admin
     assert client.get(
         "/api/v1/admin/users/pending", headers=admin_headers
     ).json() == []
+
+
+def test_admin_can_list_view_and_update_nursery_status(admin_api):
+    client, admin, customer, db_session = admin_api
+    nursery = Nursery(
+        owner_id=customer.id,
+        name="Customer Nursery",
+        description="A nursery account",
+        address="12 Garden Road",
+        city="Dhaka",
+        phone="+8801712345678",
+        email="nursery@example.com",
+    )
+    db_session.add(nursery)
+    db_session.commit()
+
+    admin_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": admin.email, "password": "AdminPassword123"},
+    )
+    admin_headers = {
+        "Authorization": f"Bearer {admin_login.json()['access_token']}"
+    }
+    customer_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": customer.email, "password": "CustomerPassword123"},
+    )
+    customer_headers = {
+        "Authorization": f"Bearer {customer_login.json()['access_token']}"
+    }
+
+    assert client.get("/api/v1/admin/nurseries").status_code == 401
+    assert client.get("/api/v1/admin/nurseries/1").status_code == 401
+    assert client.patch(
+        "/api/v1/admin/nurseries/1",
+        json={"status": "inactive"},
+    ).status_code == 401
+    assert client.get(
+        "/api/v1/admin/nurseries", headers=customer_headers
+    ).status_code == 403
+    assert client.get(
+        "/api/v1/admin/nurseries/1", headers=customer_headers
+    ).status_code == 403
+    assert client.patch(
+        "/api/v1/admin/nurseries/1",
+        headers=customer_headers,
+        json={"status": "inactive"},
+    ).status_code == 403
+
+    listed = client.get("/api/v1/admin/nurseries", headers=admin_headers)
+    assert listed.status_code == 200
+    assert len(listed.json()) == 1
+    assert listed.json()[0]["id"] == nursery.id
+    assert listed.json()[0]["name"] == "Customer Nursery"
+    assert listed.json()[0]["status"] == "active"
+    assert listed.json()[0]["owner"]["email"] == customer.email
+    assert listed.json()[0]["created_at"]
+
+    details = client.get(
+        f"/api/v1/admin/nurseries/{nursery.id}", headers=admin_headers
+    )
+    assert details.status_code == 200
+    assert details.json()["address"] == "12 Garden Road"
+    assert details.json()["owner"]["id"] == customer.id
+
+    updated = client.patch(
+        f"/api/v1/admin/nurseries/{nursery.id}",
+        headers=admin_headers,
+        json={"status": "inactive"},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["status"] == "inactive"
+    db_session.refresh(nursery)
+    assert nursery.status == "inactive"
+    assert client.get(
+        f"/api/v1/nurseries/{nursery.id}", headers=customer_headers
+    ).status_code == 404
+
+    invalid_status = client.patch(
+        f"/api/v1/admin/nurseries/{nursery.id}",
+        headers=admin_headers,
+        json={"status": "suspended"},
+    )
+    assert invalid_status.status_code == 422
+    missing = client.get("/api/v1/admin/nurseries/99999", headers=admin_headers)
+    assert missing.status_code == 404
+    missing_update = client.patch(
+        "/api/v1/admin/nurseries/99999",
+        headers=admin_headers,
+        json={"status": "active"},
+    )
+    assert missing_update.status_code == 404
 
 
 def test_admin_bootstrap_is_hashed_idempotent_and_never_promotes(

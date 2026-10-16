@@ -1,13 +1,14 @@
 """Admin-only management endpoints (RBAC example)."""
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.constants import ApprovalStatus, RoleName, UserStatus
 from app.database import get_db
 from app.dependencies.auth import require_roles
-from app.models import Page, Role, RolePage, User
+from app.models import Nursery, Page, Role, RolePage, User
 from app.schemas.auth import MessageResponse
+from app.schemas.nursery import AdminNurseryOut, AdminNurseryUpdate
 from app.schemas.user import AdminUserUpdate, PageOut, RoleOut, UserOut
 
 # The dependency on the router protects EVERY endpoint below.
@@ -16,6 +17,49 @@ router = APIRouter(
     tags=["Admin"],
     dependencies=[Depends(require_roles(RoleName.ADMIN))],
 )
+
+
+@router.get("/nurseries", response_model=list[AdminNurseryOut])
+def list_nurseries(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    return db.scalars(
+        select(Nursery)
+        .options(joinedload(Nursery.owner))
+        .order_by(Nursery.id)
+        .offset(skip)
+        .limit(limit)
+    ).all()
+
+
+@router.get("/nurseries/{nursery_id}", response_model=AdminNurseryOut)
+def get_nursery(nursery_id: int, db: Session = Depends(get_db)):
+    nursery = db.scalar(
+        select(Nursery)
+        .options(joinedload(Nursery.owner))
+        .where(Nursery.id == nursery_id)
+    )
+    if nursery is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Nursery not found")
+    return nursery
+
+
+@router.patch("/nurseries/{nursery_id}", response_model=AdminNurseryOut)
+def update_nursery(
+    nursery_id: int,
+    payload: AdminNurseryUpdate,
+    db: Session = Depends(get_db),
+):
+    nursery = db.get(Nursery, nursery_id)
+    if nursery is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Nursery not found")
+
+    nursery.status = payload.status.value
+    db.commit()
+    db.refresh(nursery)
+    return nursery
 
 
 @router.get("/users", response_model=list[UserOut])

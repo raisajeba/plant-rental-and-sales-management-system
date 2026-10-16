@@ -25,6 +25,12 @@ Admin users sign in through the regular login page and are directed to
 `admin.html`. Admin API routes require a valid bearer token and the active
 Admin role; logging out revokes the current token.
 
+Admins can review nursery accounts at `/api/v1/admin/nurseries`, retrieve an
+account at `/api/v1/admin/nurseries/{id}`, and change its status to `active` or
+`inactive` with `PATCH`. Nursery status changes are also available from the
+Admin panel; inactive nurseries are hidden from customer listings and cannot
+serve their plants.
+
 New public registrations require Admin approval. Before deploying this change
 to an existing database, apply `app/migrations/001_add_user_approval_status.sql`.
 Existing accounts default to approved; new registrations remain pending and
