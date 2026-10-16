@@ -85,3 +85,10 @@ class PlantOut(BaseModel):
 
 class PlantSearchOut(PlantOut):
     nursery_name: str
+
+
+# Rebuild Pydantic models to resolve forward references
+PlantCreate.model_rebuild()
+PlantUpdate.model_rebuild()
+PlantOut.model_rebuild()
+PlantSearchOut.model_rebuild()

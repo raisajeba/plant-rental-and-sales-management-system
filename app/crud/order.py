@@ -1,3 +1,4 @@
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.models.plant import Plant
@@ -80,3 +81,39 @@ def create_purchase_order_from_cart(db: Session, user_id: int) -> Order:
     db.refresh(new_order)
 
     return new_order
+
+
+# ==========================================
+# Jira Feature: Nursery Owner Order Status
+# ==========================================
+
+def get_orders_for_nursery_owner(db: Session, owner_id: int) -> List[Order]:
+    """Fetch all orders containing plants owned by the logged-in nursery owner."""
+    return (
+        db.query(Order)
+        .join(OrderItem, Order.id == OrderItem.order_id)
+        .join(Plant, OrderItem.plant_id == Plant.id)
+        .filter(Plant.owner_id == owner_id)
+        .distinct()
+        .all()
+    )
+
+
+def get_order_by_id_for_owner(db: Session, order_id: int, owner_id: int) -> Optional[Order]:
+    """Fetch specific order only if it contains plants belonging to the nursery owner."""
+    return (
+        db.query(Order)
+        .join(OrderItem, Order.id == OrderItem.order_id)
+        .join(Plant, OrderItem.plant_id == Plant.id)
+        .filter(Order.id == order_id, Plant.owner_id == owner_id)
+        .first()
+    )
+
+
+def update_order_status(db: Session, order: Order, new_status: OrderStatus) -> Order:
+    """Update and persist the new order status in DB."""
+    order.status = new_status
+    db.commit()
+    db.refresh(order)
+    return order
+    

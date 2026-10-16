@@ -1,5 +1,4 @@
 """Import every model here so Base.metadata knows about all tables."""
-from app.models.cart_item import CartItem
 from app.models.contact_message import ContactMessage
 from app.models.maintenance import MaintenanceRequest, MaintenanceSchedule
 from app.models.nursery import Nursery
@@ -14,7 +13,7 @@ from app.models.cart import Cart, CartItem
 from app.models.order import Order, OrderItem
 
 __all__ = [
-    "User", "Role", "Page", "RolePage", "RevokedToken", "CartItem",
+    "User", "Role", "Page", "RolePage", "RevokedToken", "Cart", "CartItem",
     "MaintenanceSchedule", "MaintenanceRequest", "ContactMessage",
-    "Nursery", "Plant", "PurchaseOrder", "OrderStatus",
+    "Nursery", "Plant", "PurchaseOrder", "OrderStatus", "Order", "OrderItem",
 ]
