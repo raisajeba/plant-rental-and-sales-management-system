@@ -7,7 +7,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.config import settings
 from app.core.constants import RoleName
-from app.core.security import hash_password, verify_password
+from app.core.security import create_access_token, hash_password, verify_password
 from app.database import Base, get_db
 from app.models import Role, User
 from app.routers.admin import router as admin_router
@@ -198,6 +198,127 @@ def test_admin_can_view_and_manage_accounts_and_inactive_users_are_blocked(admin
 
     missing = client.get("/api/v1/admin/users/99999", headers=admin_headers)
     assert missing.status_code == 404
+
+
+def test_registration_waits_for_admin_approval_and_rejection_blocks_access(admin_api):
+    client, admin, _, _ = admin_api
+    pending_registration = client.post(
+        "/api/v1/auth/register",
+        json={
+            "name": "Pending Person",
+            "email": "pending@example.com",
+            "password": "PendingPassword123",
+        },
+    )
+    rejected_registration = client.post(
+        "/api/v1/auth/register",
+        json={
+            "name": "Rejected Person",
+            "email": "rejected@example.com",
+            "password": "RejectedPassword123",
+        },
+    )
+    assert pending_registration.status_code == 201
+    assert pending_registration.json()["status"] == "inactive"
+    assert pending_registration.json()["approval_status"] == "pending"
+    pending_id = pending_registration.json()["id"]
+    rejected_id = rejected_registration.json()["id"]
+
+    pending_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "pending@example.com", "password": "PendingPassword123"},
+    )
+    assert pending_login.status_code == 403
+    assert pending_login.json()["detail"] == "Account is not approved"
+
+    pending_token, _ = create_access_token(pending_id, "User")
+    protected_before_approval = client.get(
+        "/api/v1/users/me",
+        headers={"Authorization": f"Bearer {pending_token}"},
+    )
+    assert protected_before_approval.status_code == 403
+
+    assert client.get("/api/v1/admin/users/pending").status_code == 401
+    admin_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": admin.email, "password": "AdminPassword123"},
+    )
+    admin_headers = {
+        "Authorization": f"Bearer {admin_login.json()['access_token']}"
+    }
+    customer_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "customer@example.com", "password": "CustomerPassword123"},
+    )
+    customer_headers = {
+        "Authorization": f"Bearer {customer_login.json()['access_token']}"
+    }
+    unauthorized_approval = client.post(
+        f"/api/v1/admin/users/{pending_id}/approve",
+        headers=customer_headers,
+    )
+    assert unauthorized_approval.status_code == 403
+    assert client.get(
+        "/api/v1/admin/users/pending", headers=customer_headers
+    ).status_code == 403
+
+    pending_list = client.get("/api/v1/admin/users/pending", headers=admin_headers)
+    assert pending_list.status_code == 200
+    assert {user["id"] for user in pending_list.json()} == {
+        pending_id,
+        rejected_id,
+    }
+    assert all(user["approval_status"] == "pending" for user in pending_list.json())
+
+    approved = client.post(
+        f"/api/v1/admin/users/{pending_id}/approve", headers=admin_headers
+    )
+    assert approved.status_code == 200
+    assert approved.json()["approval_status"] == "approved"
+    assert approved.json()["status"] == "active"
+    assert [user["id"] for user in client.get(
+        "/api/v1/admin/users/pending", headers=admin_headers
+    ).json()] == [rejected_id]
+
+    approved_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "pending@example.com", "password": "PendingPassword123"},
+    )
+    assert approved_login.status_code == 200
+    approved_access = client.get(
+        "/api/v1/users/me",
+        headers={
+            "Authorization": f"Bearer {approved_login.json()['access_token']}"
+        },
+    )
+    assert approved_access.status_code == 200
+
+    rejected = client.post(
+        f"/api/v1/admin/users/{rejected_id}/reject", headers=admin_headers
+    )
+    assert rejected.status_code == 200
+    assert rejected.json()["approval_status"] == "rejected"
+    assert rejected.json()["status"] == "inactive"
+    rejected_token, _ = create_access_token(rejected_id, "User")
+    rejected_access = client.get(
+        "/api/v1/users/me",
+        headers={"Authorization": f"Bearer {rejected_token}"},
+    )
+    assert rejected_access.status_code == 403
+    assert rejected_access.json()["detail"] == "Account is not approved"
+    rejected_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "rejected@example.com", "password": "RejectedPassword123"},
+    )
+    assert rejected_login.status_code == 403
+
+    repeated_approval = client.post(
+        f"/api/v1/admin/users/{rejected_id}/approve", headers=admin_headers
+    )
+    assert repeated_approval.status_code == 409
+    assert client.get(
+        "/api/v1/admin/users/pending", headers=admin_headers
+    ).json() == []
 
 
 def test_admin_bootstrap_is_hashed_idempotent_and_never_promotes(

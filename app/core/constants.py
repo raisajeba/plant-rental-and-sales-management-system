@@ -19,6 +19,12 @@ class UserStatus(str, Enum):
     BLOCKED = "blocked"
 
 
+class ApprovalStatus(str, Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
 class MaintenanceTask(str, Enum):
     WATERING = "watering"
     FERTILIZING = "fertilizing"

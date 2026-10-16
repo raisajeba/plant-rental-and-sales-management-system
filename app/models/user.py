@@ -1,6 +1,7 @@
 from sqlalchemy import CheckConstraint, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.constants import ApprovalStatus
 from app.database import Base
 from app.models.mixins import TimestampMixin
 
@@ -10,6 +11,10 @@ class User(TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint(
             "status IN ('active', 'inactive', 'blocked')", name="ck_users_status"
+        ),
+        CheckConstraint(
+            "approval_status IN ('pending', 'approved', 'rejected')",
+            name="ck_users_approval_status",
         ),
     )
 
@@ -29,6 +34,12 @@ class User(TimestampMixin, Base):
     )
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="active", server_default="active"
+    )
+    approval_status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default=ApprovalStatus.APPROVED.value,
+        server_default=ApprovalStatus.APPROVED.value,
     )
     # Which user created this account (NULL = self-registered).
     created_by: Mapped[int | None] = mapped_column(

@@ -5,7 +5,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.constants import RoleName, Status
+from app.core.constants import ApprovalStatus, RoleName, Status
 from app.core.security import decode_access_token
 from app.database import get_db
 from app.models import Page, RevokedToken, RolePage, User
@@ -55,6 +55,8 @@ def get_current_user(
     user = db.get(User, user_id)
     if user is None:
         raise _unauthorized("User no longer exists")
+    if user.approval_status != ApprovalStatus.APPROVED.value:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Account is not approved")
     if user.status != "active":
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Account is not active")
     if user.role.status != "active":

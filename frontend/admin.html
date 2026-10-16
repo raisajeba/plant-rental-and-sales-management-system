@@ -17,6 +17,27 @@
       <header class="topbar"><h1>Admin</h1></header>
       <main class="content">
         <div id="message" class="alert hidden" role="status"></div>
+        <section class="card" aria-labelledby="pendingHeading">
+          <h2 id="pendingHeading">Pending account approvals</h2>
+          <p class="page-intro">Review new accounts before granting system access.</p>
+          <div style="overflow-x: auto;">
+            <table class="order-history-table">
+              <thead>
+                <tr>
+                  <th scope="col">User ID</th>
+                  <th scope="col">Name</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Role</th>
+                  <th scope="col">Registered</th>
+                  <th scope="col">Action</th>
+                </tr>
+              </thead>
+              <tbody id="pendingAccounts">
+                <tr><td class="order-history-state" colspan="6">Loading pending accounts...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
         <section class="card" aria-labelledby="usersHeading">
           <h2 id="usersHeading">User access management</h2>
           <p class="page-intro">Update account roles and access status.</p>
@@ -29,12 +50,13 @@
                   <th scope="col">Email</th>
                   <th scope="col">Role</th>
                   <th scope="col">Status</th>
+                  <th scope="col">Approval</th>
                   <th scope="col">Registered</th>
                   <th scope="col">Manage</th>
                 </tr>
               </thead>
               <tbody id="adminUsers">
-                <tr><td class="order-history-state" colspan="7">Loading users...</td></tr>
+                <tr><td class="order-history-state" colspan="8">Loading users...</td></tr>
               </tbody>
             </table>
           </div>

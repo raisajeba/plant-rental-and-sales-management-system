@@ -362,7 +362,7 @@ function initRegisterPage() {
       });
 
       showMessage(
-        "Account created! Redirecting to login...",
+        "Account submitted for approval. You can log in after it is approved.",
         "success"
       );
 
