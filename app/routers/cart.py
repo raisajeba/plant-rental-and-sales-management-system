@@ -3,9 +3,9 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
-from app.core.constants import AvailabilityStatus
+from app.core.constants import AvailabilityStatus, RoleName
 from app.database import get_db
-from app.dependencies.auth import get_current_user
+from app.dependencies.auth import require_roles
 from app.models import CartItem, Plant, User
 from app.schemas.cart import CartItemCreate, CartItemOut, CartItemUpdate
 
@@ -19,7 +19,7 @@ _SALE_STATUSES = {
 
 @router.get("/items", response_model=list[CartItemOut])
 def get_cart_items(
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(RoleName.USER)),
     db: Session = Depends(get_db),
 ):
     statement = (
@@ -38,7 +38,7 @@ def get_cart_items(
 )
 def add_cart_item(
     payload: CartItemCreate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(RoleName.USER)),
     db: Session = Depends(get_db),
 ):
     plant = db.scalar(
@@ -113,7 +113,7 @@ def add_cart_item(
 def update_cart_item_quantity(
     cart_item_id: int,
     payload: CartItemUpdate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(RoleName.USER)),
     db: Session = Depends(get_db),
 ):
     cart_item = db.scalar(
@@ -168,7 +168,7 @@ def update_cart_item_quantity(
 )
 def remove_cart_item(
     cart_item_id: int,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(RoleName.USER)),
     db: Session = Depends(get_db),
 ):
     cart_item = db.scalar(

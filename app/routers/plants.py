@@ -5,14 +5,25 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.core.constants import AvailabilityStatus
+from app.core.constants import AvailabilityStatus, RoleName
 from app.database import get_db
-from app.dependencies.auth import get_current_user
+from app.dependencies.auth import require_roles
 from app.models import Nursery, Plant, User
 from app.schemas.plant import PlantOut, PlantSearchOut
 from app.schemas.plant import PlantCreate, PlantOut, PlantUpdate
 
 router = APIRouter(prefix="/plants", tags=["Plants"])
+
+
+def verify_plant_ownership(db: Session, user_id: int, plant: Plant) -> None:
+    nursery = db.get(Nursery, plant.nursery_id)
+    if nursery is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Nursery not found")
+    if nursery.owner_id != user_id:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "You can only perform actions on plants in your own nursery",
+        )
 
 
 @router.get("", response_model=list[PlantSearchOut])
@@ -25,7 +36,7 @@ def list_plants(
     category: str | None = Query(None, min_length=1, max_length=50),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_roles(RoleName.USER)),
     db: Session = Depends(get_db),
 ):
     """Filter active-nursery plants; Indoor/Outdoor uses the existing category field."""
@@ -98,7 +109,7 @@ def search_plants(
     nursery_id: int | None = Query(None, ge=1),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_roles(RoleName.USER)),
     db: Session = Depends(get_db),
 ):
     """Search available plants by name, category, nursery name, or nursery ID."""
@@ -166,7 +177,11 @@ def search_plants(
 
 
 @router.get("/{plant_id}", response_model=PlantOut)
-def get_plant(plant_id: int, _: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_plant(
+    plant_id: int,
+    _: User = Depends(require_roles(RoleName.USER)),
+    db: Session = Depends(get_db),
+):
     plant = db.get(Plant, plant_id)
     if plant is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant not found")
@@ -178,7 +193,7 @@ def get_plant(plant_id: int, _: User = Depends(get_current_user), db: Session = 
 def update_plant(
     plant_id: int,
     plant_in: PlantUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(RoleName.NURSERY)),
     db: Session = Depends(get_db)
 ):
     plant = db.get(Plant, plant_id)
@@ -192,7 +207,7 @@ def update_plant(
         setattr(plant, key, value)
 
     if plant.available_quantity == 0:
-        plant.availability_status = "UNAVAILABLE"
+        plant.availability_status = AvailabilityStatus.UNAVAILABLE.value
 
     db.add(plant)
     db.commit()
@@ -204,7 +219,7 @@ def update_plant(
 @router.delete("/{plant_id}", status_code=status.HTTP_200_OK)
 def delete_plant(
     plant_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(RoleName.NURSERY)),
     db: Session = Depends(get_db)
 ):
     plant = db.get(Plant, plant_id)
