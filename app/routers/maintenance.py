@@ -6,9 +6,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.care_guide import CARE_GUIDE
-from app.core.constants import MaintenanceStatus, RequestStatus
+from app.core.constants import MaintenanceStatus, RequestStatus, RoleName
 from app.database import get_db
-from app.dependencies.auth import get_current_user
+from app.dependencies.auth import require_roles
 from app.models import MaintenanceRequest, MaintenanceSchedule, User
 from app.schemas.auth import MessageResponse
 from app.schemas.maintenance import (
@@ -24,7 +24,7 @@ router = APIRouter(prefix="/maintenance", tags=["Maintenance"])
 
 # =====================  CARE GUIDE  =====================
 @router.get("/care-guide", response_model=list[CareTipOut])
-def care_guide(_: User = Depends(get_current_user)):
+def care_guide(_: User = Depends(require_roles(RoleName.USER))):
     """Default 'how to' tips. The frontend can show these or prefill the form."""
     return [CareTipOut(task_type=k, how_to=v) for k, v in CARE_GUIDE.items() if v]
 
@@ -35,7 +35,7 @@ def my_schedules(
     status_filter: MaintenanceStatus | None = Query(None, alias="status"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(RoleName.USER)),
     db: Session = Depends(get_db),
 ):
     """The table on the Maintenance page: soonest task first."""
@@ -51,7 +51,7 @@ def my_schedules(
 )
 def create_schedule(
     payload: MaintenanceScheduleCreate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(RoleName.USER)),
     db: Session = Depends(get_db),
 ):
     """The user adds a care task for one of their plants."""
@@ -84,7 +84,7 @@ def _get_my_schedule(schedule_id: int, user: User, db: Session) -> MaintenanceSc
 @router.patch("/schedules/{schedule_id}/complete", response_model=MaintenanceScheduleOut)
 def complete_schedule(
     schedule_id: int,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(RoleName.USER)),
     db: Session = Depends(get_db),
 ):
     """Mark a task done. Recurring tasks automatically create the next one."""
@@ -114,7 +114,7 @@ def complete_schedule(
 @router.delete("/schedules/{schedule_id}", response_model=MessageResponse)
 def delete_schedule(
     schedule_id: int,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(RoleName.USER)),
     db: Session = Depends(get_db),
 ):
     schedule = _get_my_schedule(schedule_id, user, db)
@@ -129,7 +129,7 @@ def delete_schedule(
 )
 def create_request(
     payload: MaintenanceRequestCreate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(RoleName.USER)),
     db: Session = Depends(get_db),
 ):
     request = MaintenanceRequest(
@@ -149,7 +149,7 @@ def create_request(
 def my_requests(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(RoleName.USER)),
     db: Session = Depends(get_db),
 ):
     stmt = (
@@ -165,7 +165,7 @@ def my_requests(
 @router.patch("/requests/{request_id}/cancel", response_model=MaintenanceRequestOut)
 def cancel_request(
     request_id: int,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(RoleName.USER)),
     db: Session = Depends(get_db),
 ):
     request = db.scalar(

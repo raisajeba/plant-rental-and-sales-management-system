@@ -1,15 +1,15 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.models.plant import Plant
-from app.models.cart import Cart, CartItem
-from app.models.order import Order, OrderItem
+from app.models.cart_item import CartItem
+from app.models.order import Order, OrderItem, RentalOrder
 from app.schemas.order import OrderStatus
 
 
 def create_purchase_order_from_cart(db: Session, user_id: int) -> Order:
     # 1. Validate Cart
-    cart = db.query(Cart).filter(Cart.user_id == user_id).first()
-    if not cart or not cart.items:
+    cart_items = db.query(CartItem).filter(CartItem.user_id == user_id).all()
+    if not cart_items:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Your cart is empty. Add plants before placing an order."
@@ -19,7 +19,7 @@ def create_purchase_order_from_cart(db: Session, user_id: int) -> Order:
     total_order_amount = 0.0
 
     # 2. Check Plant Availability and Calculate Amounts
-    for cart_item in cart.items:
+    for cart_item in cart_items:
         plant = db.query(Plant).filter(Plant.id == cart_item.plant_id).with_for_update().first()
         
         if not plant:
@@ -74,9 +74,57 @@ def create_purchase_order_from_cart(db: Session, user_id: int) -> Order:
     db.add(new_order)
 
     # Clear Cart Items after order creation
-    db.query(CartItem).filter(CartItem.cart_id == cart.id).delete()
+    db.query(CartItem).filter(CartItem.user_id == user_id).delete()
 
     db.commit()
     db.refresh(new_order)
 
     return new_order
+
+
+def create_rental_order(
+    db: Session,
+    *,
+    user_id: int,
+    plant_id: int,
+    quantity: int,
+    rental_months: int,
+) -> RentalOrder:
+    plant = (
+        db.query(Plant)
+        .filter(Plant.id == plant_id)
+        .with_for_update()
+        .first()
+    )
+    if plant is None or plant.nursery.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Plant not found",
+        )
+    if (
+        plant.rent_price is None
+        or plant.rent_price <= 0
+        or plant.availability_status not in ("available_for_rent", "available_for_both")
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This plant is not available for rent",
+        )
+    if plant.available_quantity < quantity:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Requested quantity exceeds available stock",
+        )
+
+    rental_order = RentalOrder(
+        user_id=user_id,
+        plant_id=plant.id,
+        quantity=quantity,
+        rental_months=rental_months,
+        total_amount=float(plant.rent_price) * quantity * rental_months,
+        status="Pending",
+    )
+    db.add(rental_order)
+    db.commit()
+    db.refresh(rental_order)
+    return rental_order

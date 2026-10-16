@@ -17,7 +17,7 @@ MENU_ORDER = {url: index for index, (_, url, _) in enumerate(MENU_PAGES)}
 
 @router.get("/my-menu", response_model=list[PageOut])
 def my_menu(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Returns: Plants, Rent, Buy, Maintenance, Contact Us, About Us (in that order)."""
+    """Return the dashboard pages in their configured display order."""
     stmt = (
         select(Page)
         .join(RolePage, RolePage.page_id == Page.id)

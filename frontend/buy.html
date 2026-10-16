@@ -3,29 +3,41 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Buy | Green Forest</title>
+  <title>Buy Plants | Green Forest</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/dashboard.css" />
 </head>
-<body data-page="buy" data-layout="dashboard" data-endpoint="/buy" data-icon="🛒">
+<body data-page="buy" data-layout="dashboard">
   <div class="app-layout">
     <aside class="sidebar" id="sidebar"></aside>
 
     <div class="main">
-       <header class="topbar"><h1>Buy</h1></header>
+      <header class="topbar">
+        <h1>Buy Plants</h1>
+      </header>
+      
       <div class="content">
         <div id="message" class="alert hidden"></div>
-        <section class="card state-box" id="featureBox">
-          <p>Loading...</p>
-        </section>
+
+        <!-- Filter & Search Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <p style="color: #666; margin: 0;">Explore our collection of fresh plants available for purchase.</p>
+          <input type="text" id="searchInput" placeholder="Search plants..." style="padding: 0.5rem 1rem; border: 1px solid #ddd; border-radius: 6px; width: 250px;" />
+        </div>
+
+        <!-- Plants Grid Container (Real Backend Data will fill this) -->
+        <div id="buyPlantsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.5rem;">
+          <!-- Dynamic cards will be injected here via buy.js -->
+          <div class="card" style="padding: 1.5rem; text-align: center; color: #666;">Loading available plants...</div>
+        </div>
       </div>
     </div>
   </div>
 
   <script src="js/app.js"></script>
   <script src="js/layout.js"></script>
-  <script src="js/pages/placeholder.js"></script>
+  <script src="js/pages/buy.js"></script>
 </body>
 </html>
