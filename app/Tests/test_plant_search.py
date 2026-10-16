@@ -1,4 +1,5 @@
 import os
+from types import SimpleNamespace
 
 os.environ.setdefault("DB_NAME", "test")
 os.environ.setdefault("DB_USER", "test")
@@ -36,7 +37,9 @@ def client():
             yield session
 
     app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_current_user] = lambda: object()
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+        role=SimpleNamespace(role_name="User")
+    )
 
     with TestingSession() as session:
         active = Nursery(
