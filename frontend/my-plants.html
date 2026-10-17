@@ -28,16 +28,80 @@
                 <th style="padding: 0.75rem;">Category</th>
                 <th style="padding: 0.75rem;">Quantity</th>
                 <th style="padding: 0.75rem;">Availability</th>
+                <th style="padding: 0.75rem;">Actions</th>
               </tr>
             </thead>
             <tbody id="myPlantsTableBody">
-              <tr><td colspan="4" style="text-align: center; padding: 2rem;">Loading your plants...</td></tr>
+              <tr><td colspan="5" style="text-align: center; padding: 2rem;">Loading your plants...</td></tr>
             </tbody>
           </table>
         </section>
       </div>
     </div>
   </div>
+
+  <dialog id="editPlantDialog" class="plant-edit-dialog" aria-labelledby="editPlantTitle">
+    <form id="editPlantForm">
+      <header class="plant-edit-header">
+        <h2 id="editPlantTitle">Edit Plant</h2>
+        <button type="button" class="plant-edit-close" aria-label="Close edit form">&times;</button>
+      </header>
+      <div id="editPlantMessage" class="alert hidden" role="alert"></div>
+      <label>
+        Plant name
+        <input type="text" id="editPlantName" minlength="2" maxlength="150" required />
+      </label>
+      <label>
+        Category
+        <input type="text" id="editPlantCategory" minlength="2" maxlength="50" required />
+      </label>
+      <label>
+        Size
+        <input type="text" id="editPlantSize" maxlength="50" />
+      </label>
+      <label>
+        Description
+        <textarea id="editPlantDescription" maxlength="1000" rows="3"></textarea>
+      </label>
+      <div class="plant-edit-two-columns">
+        <label>
+          Sale price
+          <input type="number" id="editPlantBuyPrice" min="0" step="0.01" />
+        </label>
+        <label>
+          Rent price per day
+          <input type="number" id="editPlantRentPrice" min="0" step="0.01" />
+        </label>
+        <label>
+          Quantity
+          <input type="number" id="editPlantQuantity" min="0" max="1000000" step="1" required />
+        </label>
+        <label>
+          Availability
+          <select id="editPlantAvailability" required>
+            <option value="unavailable">Unavailable</option>
+            <option value="available_for_sale">Available for sale</option>
+            <option value="available_for_rent">Available for rent</option>
+            <option value="available_for_both">Available for sale and rent</option>
+          </select>
+        </label>
+      </div>
+      <label>
+        Care instructions
+        <textarea id="editPlantCare" maxlength="1000" rows="3"></textarea>
+      </label>
+      <label>
+        Replace plant image
+        <img id="editPlantCurrentImage" class="plant-edit-current-image" alt="Current plant image" hidden />
+        <input type="file" id="editPlantImage" accept="image/jpeg,image/png,image/webp" />
+        <small>Optional. JPG, PNG, or WEBP; maximum 5 MB.</small>
+      </label>
+      <div class="plant-edit-actions">
+        <button type="button" class="btn btn-reset plant-edit-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="savePlantButton">Save Changes</button>
+      </div>
+    </form>
+  </dialog>
 
   <script src="js/app.js"></script>
   <script src="js/layout.js"></script>
