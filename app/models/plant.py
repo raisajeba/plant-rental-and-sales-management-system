@@ -81,3 +81,4 @@ class Plant(TimestampMixin, Base):
         back_populates="plants",
     )
     purchase_orders = relationship("PurchaseOrder", back_populates="plant")
+    rental_orders = relationship("PlantRentalOrder", back_populates="plant")
