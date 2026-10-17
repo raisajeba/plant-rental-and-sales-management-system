@@ -1,3 +1,4 @@
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.models.plant import Plant
@@ -82,49 +83,37 @@ def create_purchase_order_from_cart(db: Session, user_id: int) -> Order:
     return new_order
 
 
-def create_rental_order(
-    db: Session,
-    *,
-    user_id: int,
-    plant_id: int,
-    quantity: int,
-    rental_months: int,
-) -> RentalOrder:
-    plant = (
-        db.query(Plant)
-        .filter(Plant.id == plant_id)
-        .with_for_update()
+# ==========================================
+# Jira Feature: Nursery Owner Order Status
+# ==========================================
+
+def get_orders_for_nursery_owner(db: Session, owner_id: int) -> List[Order]:
+    """Fetch all orders containing plants owned by the logged-in nursery owner."""
+    return (
+        db.query(Order)
+        .join(OrderItem, Order.id == OrderItem.order_id)
+        .join(Plant, OrderItem.plant_id == Plant.id)
+        .filter(Plant.owner_id == owner_id)
+        .distinct()
+        .all()
+    )
+
+
+def get_order_by_id_for_owner(db: Session, order_id: int, owner_id: int) -> Optional[Order]:
+    """Fetch specific order only if it contains plants belonging to the nursery owner."""
+    return (
+        db.query(Order)
+        .join(OrderItem, Order.id == OrderItem.order_id)
+        .join(Plant, OrderItem.plant_id == Plant.id)
+        .filter(Order.id == order_id, Plant.owner_id == owner_id)
         .first()
     )
-    if plant is None or plant.nursery.status != "active":
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Plant not found",
-        )
-    if (
-        plant.rent_price is None
-        or plant.rent_price <= 0
-        or plant.availability_status not in ("available_for_rent", "available_for_both")
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This plant is not available for rent",
-        )
-    if plant.available_quantity < quantity:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Requested quantity exceeds available stock",
-        )
 
-    rental_order = RentalOrder(
-        user_id=user_id,
-        plant_id=plant.id,
-        quantity=quantity,
-        rental_months=rental_months,
-        total_amount=float(plant.rent_price) * quantity * rental_months,
-        status="Pending",
-    )
-    db.add(rental_order)
+
+def update_order_status(db: Session, order: Order, new_status: OrderStatus) -> Order:
+    """Update and persist the new order status in DB."""
+    order.status = new_status
     db.commit()
-    db.refresh(rental_order)
-    return rental_order
+    db.refresh(order)
+    return order
+    

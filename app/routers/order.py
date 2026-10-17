@@ -1,26 +1,22 @@
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.orm import Session, joinedload
-from app.core.constants import RoleName
+from sqlalchemy.orm import Session
+
 from app.database import get_db
-from app.dependencies.auth import require_roles
-from app.models import Nursery, Order, OrderItem, Plant, RentalOrder, User
-from app.schemas.order import (
-    OrderHistoryItemOut,
-    OrderHistoryOut,
-    OrderOut,
-    OrderStatusUpdate,
-    OwnerOrderItemOut,
-    OwnerOrderOut,
-    RentalOrderCreate,
-    RentalOrderOut,
+from app.dependencies.auth import get_current_user  # Your auth dependency
+from app.schemas.order import OrderOut, OrderStatusUpdate
+from app.crud.order import (
+    create_purchase_order_from_cart,
+    get_orders_for_nursery_owner,
+    get_order_by_id_for_owner,
+    update_order_status
 )
-from app.crud.order import create_purchase_order_from_cart, create_rental_order
 
 router = APIRouter(
     prefix="/orders",
     tags=["Orders"]
 )
+
 
 @router.post("/checkout", response_model=OrderOut, status_code=status.HTTP_201_CREATED)
 def checkout_cart(
@@ -116,158 +112,39 @@ def update_owner_order_status(
     current_user: User = Depends(require_roles(RoleName.NURSERY)),
     db: Session = Depends(get_db),
 ):
-    row = db.execute(
-        _owner_order_query(current_user.id)
-        .where(Order.id == order_id)
-    ).unique().first()
-    if row is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found")
-
-    order, customer_name = row
-    order.status = payload.status.value
-    db.commit()
-    db.refresh(order)
-    return _owner_order_output(order, customer_name, current_user.id)
+    return create_purchase_order_from_cart(db=db, user_id=current_user.id)
 
 
-@router.get("/my-orders", response_model=list[OrderHistoryOut])
-def list_my_orders(
-    current_user: User = Depends(require_roles(RoleName.USER)),
+@router.get("/nursery", response_model=List[OrderOut])
+def view_nursery_owner_orders(
     db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
 ):
-    purchase_orders = db.scalars(
-        select(Order)
-        .options(joinedload(Order.items).joinedload(OrderItem.plant))
-        .where(Order.user_id == current_user.id)
-    ).unique().all()
-    rental_orders = db.scalars(
-        select(RentalOrder)
-        .options(joinedload(RentalOrder.plant))
-        .where(RentalOrder.user_id == current_user.id)
-    ).all()
-
-    history = [
-        OrderHistoryOut(
-            id=order.id,
-            order_type="Purchase",
-            total_amount=order.total_amount,
-            status=order.status,
-            created_at=order.created_at,
-            items=[
-                OrderHistoryItemOut(
-                    id=item.id,
-                    plant_id=item.plant_id,
-                    plant_name=item.plant.name,
-                    quantity=item.quantity,
-                    unit_price=item.unit_price,
-                    total_price=item.total_price,
-                )
-                for item in order.items
-            ],
-        )
-        for order in purchase_orders
-    ]
-    history.extend(
-        OrderHistoryOut(
-            id=order.id,
-            order_type="Rental",
-            total_amount=order.total_amount,
-            status=order.status,
-            created_at=order.created_at,
-            items=[
-                OrderHistoryItemOut(
-                    id=order.id,
-                    plant_id=order.plant_id,
-                    plant_name=order.plant.name,
-                    quantity=order.quantity,
-                    unit_price=float(order.plant.rent_price),
-                    total_price=order.total_amount,
-                    rental_months=order.rental_months,
-                )
-            ],
-        )
-        for order in rental_orders
-    )
-    return sorted(history, key=lambda order: order.created_at, reverse=True)
+    """
+    Allow nursery owners to view current status of purchase orders
+    related to plants from their nursery.
+    """
+    return get_orders_for_nursery_owner(db=db, owner_id=current_user.id)
 
 
-@router.post(
-    "/rentals",
-    response_model=RentalOrderOut,
-    status_code=status.HTTP_201_CREATED,
-)
-def checkout_rental(
-    payload: RentalOrderCreate,
-    current_user: User = Depends(require_roles(RoleName.USER)),
-    db: Session = Depends(get_db),
-):
-    return create_rental_order(
-        db,
-        user_id=current_user.id,
-        plant_id=payload.plant_id,
-        quantity=payload.quantity,
-        rental_months=payload.rental_months,
-    )
-
-
-@router.get("/my-orders/{order_type}/{order_id}", response_model=OrderHistoryOut)
-def get_my_order(
-    order_type: str,
+@router.patch("/{order_id}/status", response_model=OrderOut)
+def update_nursery_order_status(
     order_id: int,
-    current_user: User = Depends(require_roles(RoleName.USER)),
+    status_update: OrderStatusUpdate,
     db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
 ):
-    if order_type == "purchase":
-        purchase_order = db.scalar(
-            select(Order)
-            .options(joinedload(Order.items).joinedload(OrderItem.plant))
-            .where(Order.id == order_id, Order.user_id == current_user.id)
-        )
-        if purchase_order is None:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found")
-        return OrderHistoryOut(
-            id=purchase_order.id,
-            order_type="Purchase",
-            total_amount=purchase_order.total_amount,
-            status=purchase_order.status,
-            created_at=purchase_order.created_at,
-            items=[
-                OrderHistoryItemOut(
-                    id=item.id,
-                    plant_id=item.plant_id,
-                    plant_name=item.plant.name,
-                    quantity=item.quantity,
-                    unit_price=item.unit_price,
-                    total_price=item.total_price,
-                )
-                for item in purchase_order.items
-            ],
+    """
+    Allow nursery owners to update status of purchase orders for their plants.
+    - Validates predefined order statuses (Pending, Confirmed, Processing, Completed, Cancelled).
+    - Access Control: Prevents unauthorized updates on orders not belonging to their plants.
+    """
+    order = get_order_by_id_for_owner(db=db, order_id=order_id, owner_id=current_user.id)
+    
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found or you are not authorized to update this order status."
         )
 
-    if order_type == "rental":
-        rental_order = db.scalar(
-            select(RentalOrder)
-            .options(joinedload(RentalOrder.plant))
-            .where(RentalOrder.id == order_id, RentalOrder.user_id == current_user.id)
-        )
-        if rental_order is None:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found")
-        return OrderHistoryOut(
-            id=rental_order.id,
-            order_type="Rental",
-            total_amount=rental_order.total_amount,
-            status=rental_order.status,
-            created_at=rental_order.created_at,
-            items=[
-                OrderHistoryItemOut(
-                    id=rental_order.id,
-                    plant_id=rental_order.plant_id,
-                    plant_name=rental_order.plant.name,
-                    quantity=rental_order.quantity,
-                    unit_price=float(rental_order.plant.rent_price),
-                    total_price=rental_order.total_amount,
-                    rental_months=rental_order.rental_months,
-                )
-            ],
-        )
-    raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found")
+    return update_order_status(db=db, order=order, new_status=status_update.status)

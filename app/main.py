@@ -19,9 +19,10 @@ from app.routers import (
     contact,
     maintenance,
     nurseries,
-    order,
+    order,  # Added for purchase orders
     pages,
     plants,
+    rentals,  # Rentals Router Here
     users,
 )
 from app.seed import seed_initial_data
@@ -56,6 +57,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# ---------------------------------------------------------
+# Rebuild Pydantic models (Fixes Python 3.14 /openapi.json 500 error)
+# ---------------------------------------------------------
+from app.schemas.plant import PlantUpdate, PlantCreate, PlantOut
+from app.schemas.nursery import NurseryUpdate, NurseryOut
+
+PlantUpdate.model_rebuild()
+PlantCreate.model_rebuild()
+PlantOut.model_rebuild()
+NurseryUpdate.model_rebuild()
+NurseryOut.model_rebuild()
+
 
 # ---------------------------------------------------------
 # Serve uploaded profile images
@@ -88,10 +101,11 @@ app.add_middleware(
 for r in (
     auth.router,
     users.router,
-    nurseries.router,  # Added here
-    plants.router,     # Added here
-    order.router,
+    nurseries.router,
+    plants.router,
     cart.router,
+    order.router,
+    rentals.router,  # <--- rentals.router অন্তর্ভুক্ত করা হলো
     pages.router,
     maintenance.router,
     contact.router,

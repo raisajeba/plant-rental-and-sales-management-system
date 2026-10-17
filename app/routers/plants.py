@@ -9,7 +9,8 @@ from app.core.constants import AvailabilityStatus, RoleName
 from app.database import get_db
 from app.dependencies.auth import require_roles
 from app.models import Nursery, Plant, User
-from app.schemas.plant import PlantOut, PlantSearchOut, PlantUpdate
+from app.schemas.plant import PlantOut, PlantSearchOut
+from app.schemas.plant import PlantCreate, PlantOut, PlantUpdate
 
 router = APIRouter(prefix="/plants", tags=["Plants"])
 
@@ -230,3 +231,4 @@ def delete_plant(
     db.delete(plant)
     db.commit()
     return {"message": "Plant deleted successfully"}
+    PlantUpdate.model_rebuild()
