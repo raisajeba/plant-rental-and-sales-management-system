@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -90,3 +91,73 @@ class MaintenanceRequestOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+
+class MaintenancePlantCustomerOut(BaseModel):
+    plant_id: int
+    plant_name: str
+    customer_id: int
+    customer_name: str
+
+
+class NurseryMaintenanceCreate(BaseModel):
+    plant_id: int = Field(gt=0)
+    customer_id: int = Field(gt=0)
+    request_type: MaintenanceTask
+    description: str = Field(min_length=10, max_length=1000)
+    preferred_date: date | None = None
+
+    @field_validator("description")
+    @classmethod
+    def clean_description(cls, value: str) -> str:
+        value = value.strip()
+        if len(value) < 10:
+            raise ValueError("description must be at least 10 characters")
+        return value
+
+    @field_validator("preferred_date")
+    @classmethod
+    def not_in_past(cls, value: date | None) -> date | None:
+        if value is not None and value < date.today():
+            raise ValueError("preferred_date cannot be in the past")
+        return value
+
+
+class NurseryMaintenanceUpdate(BaseModel):
+    status: Literal["pending", "scheduled", "in_progress", "completed"] | None = None
+    preferred_date: date | None = None
+    response_note: str | None = Field(default=None, max_length=500)
+
+    @field_validator("preferred_date")
+    @classmethod
+    def not_in_past(cls, value: date | None) -> date | None:
+        if value is not None and value < date.today():
+            raise ValueError("preferred_date cannot be in the past")
+        return value
+
+    @field_validator("response_note")
+    @classmethod
+    def clean_response_note(cls, value: str | None) -> str | None:
+        value = value.strip() if value else None
+        return value or None
+
+    @model_validator(mode="after")
+    def require_a_change(self):
+        if not self.model_fields_set:
+            raise ValueError("Provide a status, preferred_date, or response_note")
+        return self
+
+
+class NurseryMaintenanceOut(BaseModel):
+    id: int
+    plant_id: int
+    plant_name: str
+    customer_id: int
+    customer_name: str
+    request_type: str
+    description: str
+    preferred_date: date | None = None
+    status: Literal["pending", "scheduled", "in_progress", "completed", "cancelled"]
+    response_note: str | None = None
+    created_at: datetime
+    updated_at: datetime
