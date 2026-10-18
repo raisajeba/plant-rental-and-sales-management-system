@@ -2,14 +2,25 @@
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, union
 from sqlalchemy.orm import Session
 
 from app.core.care_guide import CARE_GUIDE
 from app.core.constants import MaintenanceStatus, RequestStatus, RoleName
 from app.database import get_db
 from app.dependencies.auth import require_roles
-from app.models import MaintenanceRequest, MaintenanceSchedule, User
+from app.models import (
+    MaintenanceRequest,
+    MaintenanceSchedule,
+    Nursery,
+    Order,
+    OrderItem,
+    Plant,
+    PlantRentalOrder,
+    PurchaseOrder,
+    RentalOrder,
+    User,
+)
 from app.schemas.auth import MessageResponse
 from app.schemas.maintenance import (
     CareTipOut,
@@ -17,9 +28,72 @@ from app.schemas.maintenance import (
     MaintenanceRequestOut,
     MaintenanceScheduleCreate,
     MaintenanceScheduleOut,
+    MaintenancePlantCustomerOut,
+    NurseryMaintenanceCreate,
+    NurseryMaintenanceOut,
+    NurseryMaintenanceUpdate,
 )
 
 router = APIRouter(prefix="/maintenance", tags=["Maintenance"])
+
+
+def _customer_plant_pairs():
+    """Existing non-cancelled orders are the plant association source."""
+    return union(
+        select(Order.user_id.label("user_id"), OrderItem.plant_id.label("plant_id"))
+        .join(OrderItem, OrderItem.order_id == Order.id)
+        .where(Order.status != "Cancelled"),
+        select(PurchaseOrder.user_id.label("user_id"), PurchaseOrder.plant_id.label("plant_id"))
+        .where(PurchaseOrder.order_status != "CANCELLED"),
+        select(RentalOrder.user_id.label("user_id"), RentalOrder.plant_id.label("plant_id"))
+        .where(RentalOrder.status.notin_(("Cancelled", "Rejected"))),
+        select(PlantRentalOrder.user_id.label("user_id"), PlantRentalOrder.plant_id.label("plant_id"))
+        .where(PlantRentalOrder.status.notin_(("Cancelled", "Rejected"))),
+    ).subquery()
+
+
+def _owner_records_query(owner: User):
+    pairs = _customer_plant_pairs()
+    return (
+        select(MaintenanceRequest, Plant, User)
+        .join(Plant, Plant.name == MaintenanceRequest.plant_name)
+        .join(Nursery, Nursery.id == Plant.nursery_id)
+        .join(User, User.id == MaintenanceRequest.user_id)
+        .join(
+            pairs,
+            (pairs.c.user_id == MaintenanceRequest.user_id)
+            & (pairs.c.plant_id == Plant.id),
+        )
+        .where(Nursery.owner_id == owner.id)
+    )
+
+
+def _owner_record_out(
+    request: MaintenanceRequest, plant: Plant, customer: User
+) -> NurseryMaintenanceOut:
+    if request.status == RequestStatus.IN_PROGRESS.value:
+        view_status = "in_progress"
+    elif request.status == RequestStatus.RESOLVED.value:
+        view_status = "completed"
+    elif request.status == RequestStatus.CANCELLED.value:
+        view_status = "cancelled"
+    else:
+        view_status = "scheduled" if request.preferred_date else "pending"
+
+    return NurseryMaintenanceOut(
+        id=request.id,
+        plant_id=plant.id,
+        plant_name=plant.name,
+        customer_id=customer.id,
+        customer_name=customer.name,
+        request_type=request.request_type,
+        description=request.description,
+        preferred_date=request.preferred_date,
+        status=view_status,
+        response_note=request.response_note,
+        created_at=request.created_at,
+        updated_at=request.updated_at,
+    )
 
 
 # =====================  CARE GUIDE  =====================
@@ -182,3 +256,126 @@ def cancel_request(
     db.commit()
     db.refresh(request)
     return request
+
+
+# =====================  NURSERY RECORDS  =====================
+@router.get("/owner/plant-customers", response_model=list[MaintenancePlantCustomerOut])
+def owner_plant_customers(
+    owner: User = Depends(require_roles(RoleName.NURSERY)),
+    db: Session = Depends(get_db),
+):
+    """Only show customers with an order for a plant owned by this nursery."""
+    pairs = _customer_plant_pairs()
+    stmt = (
+        select(
+            Plant.id.label("plant_id"),
+            Plant.name.label("plant_name"),
+            User.id.label("customer_id"),
+            User.name.label("customer_name"),
+        )
+        .join(Nursery, Nursery.id == Plant.nursery_id)
+        .join(pairs, pairs.c.plant_id == Plant.id)
+        .join(User, User.id == pairs.c.user_id)
+        .where(Nursery.owner_id == owner.id)
+        .distinct()
+        .order_by(Plant.name, User.name)
+    )
+    return db.execute(stmt).mappings().all()
+
+
+@router.get("/owner/records", response_model=list[NurseryMaintenanceOut])
+def owner_maintenance_records(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    owner: User = Depends(require_roles(RoleName.NURSERY)),
+    db: Session = Depends(get_db),
+):
+    rows = db.execute(
+        _owner_records_query(owner)
+        .order_by(MaintenanceRequest.updated_at.desc(), MaintenanceRequest.id.desc())
+        .offset(skip)
+        .limit(limit)
+    ).all()
+    return [_owner_record_out(*row) for row in rows]
+
+
+@router.post(
+    "/owner/records",
+    response_model=NurseryMaintenanceOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_owner_maintenance_record(
+    payload: NurseryMaintenanceCreate,
+    owner: User = Depends(require_roles(RoleName.NURSERY)),
+    db: Session = Depends(get_db),
+):
+    plant = db.scalar(
+        select(Plant)
+        .join(Nursery, Nursery.id == Plant.nursery_id)
+        .where(Plant.id == payload.plant_id, Nursery.owner_id == owner.id)
+    )
+    if plant is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant not found")
+
+    pairs = _customer_plant_pairs()
+    customer = db.scalar(
+        select(User)
+        .join(pairs, pairs.c.user_id == User.id)
+        .where(pairs.c.plant_id == plant.id, User.id == payload.customer_id)
+    )
+    if customer is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant/customer association not found")
+
+    request = MaintenanceRequest(
+        user_id=customer.id,
+        plant_name=plant.name,
+        request_type=payload.request_type.value,
+        description=payload.description,
+        preferred_date=payload.preferred_date,
+    )
+    db.add(request)
+    db.commit()
+    db.refresh(request)
+    return _owner_record_out(request, plant, customer)
+
+
+@router.patch("/owner/records/{request_id}", response_model=NurseryMaintenanceOut)
+def update_owner_maintenance_record(
+    request_id: int,
+    payload: NurseryMaintenanceUpdate,
+    owner: User = Depends(require_roles(RoleName.NURSERY)),
+    db: Session = Depends(get_db),
+):
+    row = db.execute(
+        _owner_records_query(owner).where(MaintenanceRequest.id == request_id)
+    ).first()
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Maintenance record not found")
+    request, plant, customer = row
+    if request.status == RequestStatus.CANCELLED.value:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Cancelled records cannot be updated")
+
+    changes = payload.model_fields_set
+    if "preferred_date" in changes:
+        request.preferred_date = payload.preferred_date
+    if "response_note" in changes:
+        request.response_note = payload.response_note
+    if payload.status == "pending":
+        request.status = RequestStatus.OPEN.value
+        if "preferred_date" not in changes:
+            request.preferred_date = None
+    elif payload.status == "scheduled":
+        if request.preferred_date is None:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "A preferred date is required for a scheduled record",
+            )
+        request.status = RequestStatus.OPEN.value
+    elif payload.status == "in_progress":
+        request.status = RequestStatus.IN_PROGRESS.value
+    elif payload.status == "completed":
+        request.status = RequestStatus.RESOLVED.value
+
+    db.commit()
+    db.refresh(request)
+    return _owner_record_out(request, plant, customer)
