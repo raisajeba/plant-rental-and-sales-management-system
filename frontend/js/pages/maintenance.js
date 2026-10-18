@@ -29,7 +29,7 @@
     skipped: "Skipped",
     open: "Open",
     in_progress: "In progress",
-    resolved: "Resolved",
+    resolved: "Completed",
     cancelled: "Cancelled",
   };
 
@@ -111,9 +111,21 @@
      ========================================================= */
   function renderStats() {
     const pending = schedules.filter((s) => s.status === "pending");
-    $("statPending").textContent = pending.length;
-    $("statOverdue").textContent = pending.filter((s) => daysUntil(s.due_date) < 0).length;
-    $("statCompleted").textContent = schedules.filter((s) => s.status === "completed").length;
+    const openRequests = requests.filter((request) => request.status === "open");
+    $("statPending").textContent = pending.length
+      + openRequests.filter((request) => !request.preferred_date).length;
+    $("statOverdue").textContent = pending.filter(
+      (task) => daysUntil(task.due_date) < 0
+    ).length + openRequests.filter(
+      (request) => request.preferred_date && daysUntil(request.preferred_date) < 0
+    ).length;
+    $("statUpcoming").textContent = pending.filter(
+      (task) => daysUntil(task.due_date) > 0
+    ).length + openRequests.filter(
+      (request) => request.preferred_date && daysUntil(request.preferred_date) > 0
+    ).length;
+    $("statCompleted").textContent = schedules.filter((s) => s.status === "completed").length
+      + requests.filter((request) => request.status === "resolved").length;
     $("statRequests").textContent = requests.filter(
       (r) => r.status === "open" || r.status === "in_progress"
     ).length;
@@ -336,9 +348,35 @@
       titleCell.append(el("div", "cell-sub", request.plant_name || "General request"));
 
       const statusCell = el("td");
-      statusCell.append(badge(request.status, STATUS_LABELS[request.status] || request.status));
+      let requestStatusLabel = STATUS_LABELS[request.status] || request.status;
+      let requestStatusClass = request.status;
+      if (request.status === "open") {
+        if (request.preferred_date) {
+          const days = daysUntil(request.preferred_date);
+          requestStatusLabel = days < 0 ? "Overdue" : days === 0 ? "Scheduled today" : "Scheduled";
+          requestStatusClass = days < 0 ? "overdue" : "soon";
+        } else {
+          requestStatusLabel = "Pending";
+          requestStatusClass = "pending";
+        }
+      }
+      statusCell.append(badge(requestStatusClass, requestStatusLabel));
       if (request.response_note) {
         statusCell.append(el("div", "cell-sub", `Note: ${request.response_note}`));
+      }
+
+      const preferredDateCell = el("td");
+      preferredDateCell.append(el(
+        "div",
+        request.preferred_date ? "cell-strong" : "",
+        request.preferred_date ? fmtDay(request.preferred_date) : "-"
+      ));
+      if (request.status === "open" && request.preferred_date) {
+        const days = daysUntil(request.preferred_date);
+        const hint = days < 0
+          ? `${plural(-days, "day")} overdue`
+          : days === 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days} days`;
+        preferredDateCell.append(el("div", "cell-sub", hint));
       }
 
       const actionsCell = el("td");
@@ -351,7 +389,7 @@
       tr.append(
         titleCell,
         el("td", "cell-text", request.description),
-        el("td", null, request.preferred_date ? fmtDay(request.preferred_date) : "-"),
+        preferredDateCell,
         statusCell,
         el("td", null, formatDate(request.created_at)),
         actionsCell
