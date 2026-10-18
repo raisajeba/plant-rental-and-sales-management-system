@@ -128,6 +128,39 @@ def list_plants(
     ]
 
 
+@router.get("/public", response_model=list[PlantSearchOut])
+def list_public_plants(
+    limit: int = Query(8, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """Return available listings for the public plant catalog."""
+    statement = (
+        select(Plant, Nursery.name.label("nursery_name"))
+        .join(Nursery, Plant.nursery_id == Nursery.id)
+        .where(
+            Nursery.status == "active",
+            Plant.available_quantity > 0,
+            Plant.availability_status.in_(
+                [
+                    AvailabilityStatus.FOR_SALE.value,
+                    AvailabilityStatus.FOR_RENT.value,
+                    AvailabilityStatus.FOR_BOTH.value,
+                ]
+            ),
+        )
+        .order_by(Plant.name, Plant.id)
+        .limit(limit)
+    )
+    matches = db.execute(statement).all()
+    return [
+        {
+            **PlantOut.model_validate(plant).model_dump(),
+            "nursery_name": nursery_name,
+        }
+        for plant, nursery_name in matches
+    ]
+
+
 @router.get("/search", response_model=list[PlantSearchOut])
 def search_plants(
     name: str | None = Query(None, min_length=1, max_length=150),
