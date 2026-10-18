@@ -5,7 +5,9 @@ from app.core.constants import RoleName
 from app.crud.rental import (
     create_rental_request,
     get_available_rental_plants,
+    get_owner_rental_request,
     get_rental_plant,
+    list_user_rental_history,
     list_owner_rental_requests,
     update_owner_rental_status,
 )
@@ -16,6 +18,7 @@ from app.schemas.plant import PlantOut
 from app.schemas.rental import (
     PlantRentalOrderCreate,
     PlantRentalOrderResponse,
+    RentalHistoryOut,
     RentalOwnerOrderOut,
     RentalStatusUpdate,
 )
@@ -34,6 +37,14 @@ def browse_available_plants(db: Session = Depends(get_db)):
 @router.get("/plants/{plant_id}", response_model=PlantOut)
 def get_plant_details(plant_id: int, db: Session = Depends(get_db)):
     return get_rental_plant(db, plant_id)
+
+
+@router.get("/my-orders", response_model=RentalHistoryOut)
+def get_my_rental_history(
+    current_user: User = Depends(require_roles(RoleName.USER)),
+    db: Session = Depends(get_db),
+):
+    return list_user_rental_history(db, user_id=current_user.id)
 
 
 @router.post(
@@ -57,6 +68,17 @@ def get_owner_rental_requests(
     return list_owner_rental_requests(db, owner_id=current_user.id)
 
 
+@router.get("/owner/{rental_id}", response_model=RentalOwnerOrderOut)
+def get_owner_rental_request_details(
+    rental_id: int,
+    current_user: User = Depends(require_roles(RoleName.NURSERY)),
+    db: Session = Depends(get_db),
+):
+    return get_owner_rental_request(
+        db, rental_id=rental_id, owner_id=current_user.id
+    )
+
+
 @router.patch(
     "/owner/{rental_id}/status",
     response_model=RentalOwnerOrderOut,
@@ -72,4 +94,5 @@ def update_rental_request_status(
         rental_id=rental_id,
         owner_id=current_user.id,
         new_status=RentalStatus(payload.status.value),
+        rejection_reason=payload.rejection_reason,
     )
