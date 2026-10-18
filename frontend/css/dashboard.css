@@ -88,9 +88,57 @@ a.user-chip.active { background: var(--green-100); border-color: var(--green-700
 .plant-result-card p { margin-top: 6px; }
 .plant-result-card .badge { margin-top: 10px; }
 .plant-empty { grid-column: 1 / -1; color: var(--muted); padding: 24px 0; }
-.plant-cart-form { display: flex; align-items: flex-end; gap: 10px; margin-top: 14px; }
-.plant-cart-form .form-group { flex: 1; margin-bottom: 0; }
-.plant-cart-form input { max-width: 120px; }
+.rental-plant-card { display: flex; flex-direction: column; min-width: 0; padding: 20px; }
+.rental-plant-image, .plant-store-image {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+.rental-plant-card h3, .plant-store-card h3 { margin: 0 0 6px; overflow-wrap: anywhere; }
+.rental-plant-card p, .plant-store-card p { margin: 6px 0; }
+.rental-plant-price, .plant-store-price { color: var(--green-700); font-weight: 700; }
+.rental-request-form { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 14px; }
+.rental-request-form label { display: grid; gap: 5px; font-size: 14px; font-weight: 600; }
+.rental-request-form input { box-sizing: border-box; width: 100%; min-width: 0; padding: 9px 10px; }
+.rental-request-form button, .plant-store-action { width: 100%; white-space: normal; }
+.plant-store-card { display: flex; flex-direction: column; justify-content: space-between; gap: 14px; min-width: 0; padding: 16px; }
+.plant-store-placeholder {
+  display: grid;
+  min-height: 120px;
+  margin-bottom: 14px;
+  place-items: center;
+  border-radius: 8px;
+  background: #e6f4ea;
+  font-size: 3rem;
+}
+.plant-store-image:not([hidden]) + .plant-store-placeholder { display: none; }
+.plant-store-image[hidden] { display: none; }
+.plant-edit-dialog {
+  width: min(620px, calc(100% - 32px));
+  max-height: min(90vh, 900px);
+  padding: 24px;
+  border: 0;
+  border-radius: 14px;
+  color: var(--text);
+  box-shadow: 0 18px 60px rgb(0 0 0 / 24%);
+}
+.plant-edit-dialog::backdrop { background: rgb(16 24 18 / 55%); }
+.plant-edit-dialog form { display: grid; gap: 14px; }
+.plant-edit-header, .plant-edit-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.plant-edit-header h2 { margin: 0; }
+.plant-edit-close { border: 0; background: transparent; color: inherit; font-size: 28px; cursor: pointer; }
+.plant-edit-dialog label { display: grid; gap: 6px; font-weight: 600; }
+.plant-edit-dialog input, .plant-edit-dialog select, .plant-edit-dialog textarea { box-sizing: border-box; width: 100%; min-width: 0; padding: 9px 10px; }
+.plant-edit-dialog small { color: var(--muted); font-weight: 400; }
+.plant-edit-current-image { width: 120px; height: 100px; object-fit: cover; border-radius: 8px; }
+.plant-edit-current-image[hidden] { display: none; }
+.plant-edit-two-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.plant-edit-actions { justify-content: flex-end; margin-top: 4px; }
+@media (max-width: 520px) {
+  .plant-edit-two-columns { grid-template-columns: 1fr; }
+}
 
 /* ---------- About page ---------- */
 .about-text { color: var(--text); line-height: 1.7; }

@@ -31,6 +31,23 @@ class OrderOut(BaseModel):
     class Config:
         from_attributes = True
 
+
+class OwnerOrderItemOut(BaseModel):
+    plant_id: int
+    plant_name: str
+    quantity: int
+    unit_price: float
+    total_price: float
+
+
+class OwnerOrderOut(BaseModel):
+    id: int
+    customer_name: str
+    total_price: float
+    status: OrderStatus
+    order_date: datetime
+    items: List[OwnerOrderItemOut]
+
 # --- Jira Feature: Order Status Update Request Schema ---
 class OrderStatusUpdate(BaseModel):
     status: OrderStatus = Field(
