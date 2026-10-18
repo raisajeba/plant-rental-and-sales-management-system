@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 
 from fastapi import HTTPException, status
@@ -11,8 +12,15 @@ from app.schemas.rental import PlantRentalOrderCreate
 
 _RENTAL_STATUSES_RESERVING_STOCK = (
     RentalStatus.PENDING,
+    RentalStatus.APPROVED,
     RentalStatus.CONFIRMED,
     RentalStatus.ACTIVE,
+)
+
+_RENTAL_STATUSES_PREVIOUS = (
+    RentalStatus.COMPLETED,
+    RentalStatus.REJECTED,
+    RentalStatus.CANCELLED,
 )
 
 
@@ -185,7 +193,9 @@ def list_owner_rental_requests(db: Session, *, owner_id: int) -> list[dict]:
     return [
         {
             "id": rental.rental_id,
+            "order_identifier": rental.order_identifier,
             "customer_name": customer_name,
+            "plant_id": rental.plant_id,
             "plant_name": plant_name,
             "quantity": rental.quantity,
             "rental_start_date": rental.rental_start_date,
@@ -195,9 +205,83 @@ def list_owner_rental_requests(db: Session, *, owner_id: int) -> list[dict]:
             "total_amount": rental.total_amount,
             "status": rental.status,
             "created_at": rental.created_at,
+            "rejection_reason": rental.rejection_reason,
         }
         for rental, customer_name, plant_name in rows
     ]
+
+
+def get_owner_rental_request(
+    db: Session, *, rental_id: int, owner_id: int
+) -> dict:
+    rental = db.scalar(
+        select(PlantRentalOrder)
+        .join(Plant, Plant.id == PlantRentalOrder.plant_id)
+        .join(Nursery, Nursery.id == Plant.nursery_id)
+        .options(joinedload(PlantRentalOrder.user), joinedload(PlantRentalOrder.plant))
+        .where(
+            PlantRentalOrder.rental_id == rental_id,
+            Nursery.owner_id == owner_id,
+        )
+    )
+    if rental is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Rental request not found",
+        )
+    return _rental_owner_output(rental)
+
+
+def list_user_rental_history(db: Session, *, user_id: int) -> dict:
+    rentals = db.scalars(
+        select(PlantRentalOrder)
+        .options(joinedload(PlantRentalOrder.plant))
+        .where(PlantRentalOrder.user_id == user_id)
+        .order_by(PlantRentalOrder.created_at.desc(), PlantRentalOrder.rental_id.desc())
+    ).all()
+    current_orders = []
+    previous_orders = []
+    today = date.today()
+    for rental in rentals:
+        item = {
+            "id": rental.rental_id,
+            "order_identifier": rental.order_identifier,
+            "plant_id": rental.plant_id,
+            "plant_name": rental.plant.name,
+            "quantity": rental.quantity,
+            "rental_start_date": rental.rental_start_date,
+            "rental_end_date": rental.rental_end_date,
+            "rental_duration_days": rental.rental_duration_days,
+            "rental_price_per_day": rental.rental_price_per_day,
+            "total_amount": rental.total_amount,
+            "status": rental.status,
+            "created_at": rental.created_at,
+            "rejection_reason": rental.rejection_reason,
+        }
+        if rental.status in _RENTAL_STATUSES_PREVIOUS or rental.rental_end_date < today:
+            previous_orders.append(item)
+        else:
+            current_orders.append(item)
+    return {"current_orders": current_orders, "previous_orders": previous_orders}
+
+
+def _rental_owner_output(rental: PlantRentalOrder) -> dict:
+    return {
+        "id": rental.rental_id,
+        "order_identifier": rental.order_identifier,
+        "customer_name": rental.user.name,
+        "plant_id": rental.plant_id,
+        "plant_name": rental.plant.name,
+        "quantity": rental.quantity,
+        "rental_start_date": rental.rental_start_date,
+        "rental_end_date": rental.rental_end_date,
+        "rental_duration_days": rental.rental_duration_days,
+        "rental_price_per_day": rental.rental_price_per_day,
+        "total_amount": rental.total_amount,
+        "status": rental.status,
+        "created_at": rental.created_at,
+        "rejection_reason": rental.rejection_reason,
+    }
 
 
 def update_owner_rental_status(
@@ -206,6 +290,7 @@ def update_owner_rental_status(
     rental_id: int,
     owner_id: int,
     new_status: RentalStatus,
+    rejection_reason: str | None = None,
 ) -> dict:
     rental = db.scalar(
         select(PlantRentalOrder)
@@ -225,7 +310,13 @@ def update_owner_rental_status(
 
     allowed_transitions = {
         RentalStatus.PENDING: {
+            RentalStatus.APPROVED,
             RentalStatus.CONFIRMED,
+            RentalStatus.REJECTED,
+            RentalStatus.CANCELLED,
+        },
+        RentalStatus.APPROVED: {
+            RentalStatus.ACTIVE,
             RentalStatus.CANCELLED,
         },
         RentalStatus.CONFIRMED: {
@@ -242,19 +333,67 @@ def update_owner_rental_status(
             detail=f"Cannot change rental status from {rental.status.value} to {new_status.value}",
         )
 
+    if new_status in (RentalStatus.APPROVED, RentalStatus.CONFIRMED):
+        plant = db.scalar(
+            select(Plant)
+            .options(joinedload(Plant.nursery))
+            .where(Plant.id == rental.plant_id)
+            .with_for_update()
+        )
+        if plant is None or not _plant_is_available_for_rent(plant):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="The plant is no longer available for rent.",
+            )
+        overlapping_orders = db.scalars(
+            select(PlantRentalOrder)
+            .where(
+                PlantRentalOrder.plant_id == plant.id,
+                PlantRentalOrder.rental_id != rental.rental_id,
+                PlantRentalOrder.status.in_(_RENTAL_STATUSES_RESERVING_STOCK),
+                PlantRentalOrder.rental_start_date <= rental.rental_end_date,
+                PlantRentalOrder.rental_end_date >= rental.rental_start_date,
+            )
+            .with_for_update()
+        ).all()
+        candidate_days = {
+            rental.rental_start_date,
+            *(
+                order.rental_start_date
+                for order in overlapping_orders
+                if rental.rental_start_date
+                <= order.rental_start_date
+                <= rental.rental_end_date
+            ),
+        }
+        maximum_reserved_quantity = max(
+            (
+                sum(
+                    order.quantity
+                    for order in overlapping_orders
+                    if order.rental_start_date <= rental_day <= order.rental_end_date
+                )
+                for rental_day in candidate_days
+            ),
+            default=0,
+        )
+        if maximum_reserved_quantity + rental.quantity > plant.available_quantity:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="The requested quantity is no longer available for the selected dates.",
+            )
+
+    if new_status == RentalStatus.REJECTED:
+        if rejection_reason is None or not rejection_reason.strip():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="A rejection reason is required.",
+            )
+        rental.rejection_reason = rejection_reason.strip()
+    else:
+        rental.rejection_reason = None
+
     rental.status = new_status
     db.commit()
     db.refresh(rental)
-    return {
-        "id": rental.rental_id,
-        "customer_name": rental.user.name,
-        "plant_name": rental.plant.name,
-        "quantity": rental.quantity,
-        "rental_start_date": rental.rental_start_date,
-        "rental_end_date": rental.rental_end_date,
-        "rental_duration_days": rental.rental_duration_days,
-        "rental_price_per_day": rental.rental_price_per_day,
-        "total_amount": rental.total_amount,
-        "status": rental.status,
-        "created_at": rental.created_at,
-    }
+    return _rental_owner_output(rental)

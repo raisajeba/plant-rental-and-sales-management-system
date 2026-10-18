@@ -8,6 +8,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     Numeric,
+    String,
 )
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.sql import func
@@ -16,9 +17,11 @@ from app.database import Base
 
 class RentalStatus(str, enum.Enum):
     PENDING = "Pending"
+    APPROVED = "Approved"
     CONFIRMED = "Confirmed"
     ACTIVE = "Active"
     COMPLETED = "Completed"
+    REJECTED = "Rejected"
     CANCELLED = "Cancelled"
 
 
@@ -39,6 +42,7 @@ class PlantRentalOrder(Base):
     rental_duration_days = Column(Integer, nullable=False)
     rental_price_per_day = Column(Numeric(10, 2), nullable=False)
     total_amount = Column(Numeric(12, 2), nullable=False)
+    rejection_reason = Column(String(1000), nullable=True)
 
     status = Column(
         Enum(
@@ -72,7 +76,7 @@ class PlantRentalOrder(Base):
             "total_amount > 0", name="check_plant_rental_total_amount_positive"
         ),
         CheckConstraint(
-            "status IN ('Pending', 'Confirmed', 'Active', 'Completed', 'Cancelled')",
+            "status IN ('Pending', 'Approved', 'Confirmed', 'Active', 'Completed', 'Rejected', 'Cancelled')",
             name="check_rental_status",
         ),
         CheckConstraint(
@@ -85,3 +89,7 @@ class PlantRentalOrder(Base):
         if value <= 0:
             raise ValueError(f"{key} must be greater than 0.")
         return value
+
+    @property
+    def order_identifier(self) -> str:
+        return f"RNT-{self.rental_id:08d}"

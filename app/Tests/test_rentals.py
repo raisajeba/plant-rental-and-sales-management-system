@@ -456,3 +456,162 @@ def test_owner_cannot_update_another_nurserys_rental_status(rental_api):
     )
 
     assert response.status_code == 404
+
+
+def test_user_rental_history_returns_empty_current_and_previous_lists(rental_api):
+    client, *_ = rental_api
+
+    response = client.get("/api/v1/rentals/my-orders")
+
+    assert response.status_code == 200
+    assert response.json() == {"current_orders": [], "previous_orders": []}
+
+
+def test_user_rental_history_includes_owned_order_details(rental_api):
+    client, _, plant_ids, *_ = rental_api
+    created = client.post(
+        "/api/v1/rentals/requests",
+        json=rental_payload(plant_ids["Rentable Fern"]),
+    )
+
+    response = client.get("/api/v1/rentals/my-orders")
+
+    assert response.status_code == 200
+    history = response.json()
+    assert len(history["current_orders"]) == 1
+    order = history["current_orders"][0]
+    assert order["id"] == created.json()["rental_id"]
+    assert order["order_identifier"] == created.json()["order_identifier"]
+    assert order["plant_name"] == "Rentable Fern"
+    assert order["quantity"] == 2
+    assert order["total_amount"] == 44
+    assert history["previous_orders"] == []
+
+
+def test_user_rental_history_separates_previous_orders(rental_api):
+    client, _, plant_ids, testing_session, *_ = rental_api
+    created = client.post(
+        "/api/v1/rentals/requests",
+        json=rental_payload(plant_ids["Rentable Fern"]),
+    )
+    with testing_session() as session:
+        saved = session.get(PlantRentalOrder, created.json()["rental_id"])
+        saved.rental_start_date = datetime.now(timezone.utc).date() - timedelta(days=5)
+        saved.rental_end_date = datetime.now(timezone.utc).date() - timedelta(days=1)
+        saved.status = "Completed"
+        session.commit()
+
+    response = client.get("/api/v1/rentals/my-orders")
+
+    assert response.status_code == 200
+    assert response.json()["current_orders"] == []
+    assert len(response.json()["previous_orders"]) == 1
+    assert response.json()["previous_orders"][0]["status"] == "Completed"
+
+
+def test_owner_can_view_owned_rental_request_details(rental_api):
+    client, current_user, plant_ids, *_rest = rental_api
+    created = client.post(
+        "/api/v1/rentals/requests",
+        json=rental_payload(plant_ids["Rentable Fern"]),
+    )
+    current_user["value"] = SimpleNamespace(
+        id=_rest[2],
+        role=SimpleNamespace(role_name="Nursery"),
+    )
+
+    response = client.get(
+        f"/api/v1/rentals/owner/{created.json()['rental_id']}"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["plant_name"] == "Rentable Fern"
+    assert response.json()["customer_name"] == "Rental Customer"
+
+
+def test_owner_cannot_view_another_nurserys_rental_details(rental_api):
+    client, current_user, plant_ids, *_rest = rental_api
+    created = client.post(
+        "/api/v1/rentals/requests",
+        json=rental_payload(plant_ids["Rentable Fern"]),
+    )
+    current_user["value"] = SimpleNamespace(
+        id=_rest[3],
+        role=SimpleNamespace(role_name="Nursery"),
+    )
+
+    response = client.get(
+        f"/api/v1/rentals/owner/{created.json()['rental_id']}"
+    )
+
+    assert response.status_code == 404
+
+
+def test_owner_approval_rechecks_available_quantity(rental_api):
+    client, current_user, plant_ids, testing_session, *_rest = rental_api
+    created = client.post(
+        "/api/v1/rentals/requests",
+        json=rental_payload(plant_ids["Rentable Fern"], quantity=2),
+    )
+    with testing_session() as session:
+        plant = session.get(Plant, plant_ids["Rentable Fern"])
+        plant.available_quantity = 1
+        session.commit()
+    current_user["value"] = SimpleNamespace(
+        id=_rest[1],
+        role=SimpleNamespace(role_name="Nursery"),
+    )
+
+    response = client.patch(
+        f"/api/v1/rentals/owner/{created.json()['rental_id']}/status",
+        json={"status": "Approved"},
+    )
+
+    assert response.status_code == 409
+
+
+def test_owner_can_approve_available_rental_request(rental_api):
+    client, current_user, plant_ids, *_rest = rental_api
+    created = client.post(
+        "/api/v1/rentals/requests",
+        json=rental_payload(plant_ids["Rentable Fern"]),
+    )
+    current_user["value"] = SimpleNamespace(
+        id=_rest[2],
+        role=SimpleNamespace(role_name="Nursery"),
+    )
+
+    response = client.patch(
+        f"/api/v1/rentals/owner/{created.json()['rental_id']}/status",
+        json={"status": "Approved"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "Approved"
+
+
+def test_owner_rejection_requires_and_persists_reason(rental_api):
+    client, current_user, plant_ids, testing_session, *_rest = rental_api
+    created = client.post(
+        "/api/v1/rentals/requests",
+        json=rental_payload(plant_ids["Rentable Fern"]),
+    )
+    current_user["value"] = SimpleNamespace(
+        id=_rest[1],
+        role=SimpleNamespace(role_name="Nursery"),
+    )
+    status_url = f"/api/v1/rentals/owner/{created.json()['rental_id']}/status"
+
+    missing_reason = client.patch(status_url, json={"status": "Rejected"})
+    rejected = client.patch(
+        status_url,
+        json={"status": "Rejected", "rejection_reason": "  Not enough stock  "},
+    )
+
+    assert missing_reason.status_code == 422
+    assert rejected.status_code == 200
+    assert rejected.json()["status"] == "Rejected"
+    assert rejected.json()["rejection_reason"] == "Not enough stock"
+    with testing_session() as session:
+        saved = session.get(PlantRentalOrder, created.json()["rental_id"])
+        assert saved.rejection_reason == "Not enough stock"
