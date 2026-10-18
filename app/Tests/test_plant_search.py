@@ -194,6 +194,21 @@ def test_search_returns_empty_list_when_no_plants_match(client):
     assert response.json() == []
 
 
+def test_public_catalog_lists_only_available_plants_without_auth(client):
+    test_client, _ = client
+
+    response = test_client.get("/api/v1/plants/public", params={"limit": 100})
+
+    assert response.status_code == 200
+    listings = response.json()
+    assert [plant["name"] for plant in listings] == [
+        "Garden Rose",
+        "Golden Pothos",
+        "Silver Pothos",
+    ]
+    assert listings[0]["nursery_name"] == "Green Leaf Nursery"
+
+
 @pytest.mark.parametrize("params", [{}, {"name": "   "}])
 def test_search_rejects_missing_or_blank_criteria(client, params):
     test_client, _ = client
