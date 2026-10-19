@@ -5,7 +5,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
@@ -20,9 +20,10 @@ from app.routers import (
     contact,
     maintenance,
     nurseries,
-    order,
+    order,  # Added for purchase orders
     pages,
     plants,
+    rentals,  # Rentals Router Here
     users,
 )
 from app.seed import seed_initial_data
@@ -32,6 +33,7 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 logger = logging.getLogger("greennest")
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 
 @asynccontextmanager
@@ -56,6 +58,18 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# ---------------------------------------------------------
+# Rebuild Pydantic models (Fixes Python 3.14 /openapi.json 500 error)
+# ---------------------------------------------------------
+from app.schemas.plant import PlantUpdate, PlantCreate, PlantOut
+from app.schemas.nursery import NurseryUpdate, NurseryOut
+
+PlantUpdate.model_rebuild()
+PlantCreate.model_rebuild()
+PlantOut.model_rebuild()
+NurseryUpdate.model_rebuild()
+NurseryOut.model_rebuild()
 
 
 # ---------------------------------------------------------
@@ -90,10 +104,11 @@ for r in (
     auth.router,
     admin.router,
     users.router,
-    nurseries.router,  # Added here
-    plants.router,     # Added here
-    order.router,
+    nurseries.router,
+    plants.router,
     cart.router,
+    order.router,
+    rentals.router,  # <--- rentals.router অন্তর্ভুক্ত করা হলো
     pages.router,
     maintenance.router,
     contact.router,
@@ -138,3 +153,15 @@ def health():
         status_code=503,
         content={"status": "degraded", "database": "down"},
     )
+
+
+@app.get("/", include_in_schema=False)
+def landing_page():
+    return FileResponse(FRONTEND_DIR / "landing_index.html")
+
+
+app.mount(
+    "/",
+    StaticFiles(directory=str(FRONTEND_DIR), html=True),
+    name="frontend",
+)

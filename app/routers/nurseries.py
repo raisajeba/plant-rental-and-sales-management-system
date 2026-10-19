@@ -1,7 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pathlib import Path
+from uuid import uuid4
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from pydantic import ValidationError
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
+from starlette.datastructures import UploadFile
 
 from app.core.constants import AvailabilityStatus, ListingApprovalStatus, RoleName
 from app.crud import nursery as crud_nursery
@@ -12,6 +17,14 @@ from app.schemas.nursery import NurseryCreate, NurseryOut, NurseryUpdate
 from app.schemas.plant import PlantCreate, PlantOut
 
 router = APIRouter(prefix="/nurseries", tags=["Nurseries"])
+
+PLANT_IMAGE_DIR = Path("uploads/plants")
+PLANT_IMAGE_CONTENT_TYPES = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
+MAX_PLANT_IMAGE_SIZE = 5 * 1024 * 1024
 
 
 def _get_owned_nursery(nursery_id: int, user: User, db: Session) -> Nursery:
@@ -135,12 +148,55 @@ def get_nursery(
 
 
 @router.post("/{nursery_id}/plants", response_model=PlantOut, status_code=status.HTTP_201_CREATED)
-def add_plant_to_nursery(
+async def add_plant_to_nursery(
     nursery_id: int,
-    payload: PlantCreate,
+    request: Request,
     owner: User = Depends(require_roles(RoleName.NURSERY)),
     db: Session = Depends(get_db),
 ):
+    content_type = request.headers.get("content-type", "").split(";", 1)[0].lower()
+    image: UploadFile | None = None
+    if content_type == "multipart/form-data":
+        form = await request.form()
+        fields = {}
+        for key, value in form.multi_items():
+            if key == "image":
+                if not isinstance(value, UploadFile):
+                    raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid image upload")
+                image = value
+            else:
+                fields[key] = value
+    elif content_type == "application/json":
+        fields = await request.json()
+    else:
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            "Send plant data as JSON or multipart/form-data",
+        )
+
+    try:
+        payload = PlantCreate.model_validate(fields)
+    except ValidationError as error:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=error.errors(include_context=False, include_url=False),
+        )
+
+    image_data = None
+    image_extension = None
+    if image is not None:
+        image_extension = PLANT_IMAGE_CONTENT_TYPES.get(image.content_type or "")
+        if image_extension is None:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Only JPG, PNG, and WEBP plant images are allowed",
+            )
+        image_data = await image.read(MAX_PLANT_IMAGE_SIZE + 1)
+        if not image_data:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "The uploaded image is empty")
+        if len(image_data) > MAX_PLANT_IMAGE_SIZE:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Plant images must not exceed 5 MB")
+
     nursery = _get_owned_nursery(nursery_id, owner, db)
     duplicate = db.scalar(
         select(Plant.id).where(Plant.nursery_id == nursery.id, Plant.name == payload.name)
@@ -160,7 +216,14 @@ def add_plant_to_nursery(
         db.commit()
     except IntegrityError:
         db.rollback()
+        if image_path is not None:
+            image_path.unlink(missing_ok=True)
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "The plant could not be saved.")
+    except SQLAlchemyError:
+        db.rollback()
+        if image_path is not None:
+            image_path.unlink(missing_ok=True)
+        raise
     db.refresh(plant)
     return plant
 

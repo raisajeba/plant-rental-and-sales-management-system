@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f7faf5" />
+  <meta name="description" content="Find beautiful plants to rent or buy for your home, office, or special event with Green Forest." />
+  <title>Green Forest | Bring Nature Into Your Space</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body class="landing-page" data-page="landing">
+  <header class="landing-header">
+    <a class="landing-brand" href="#home" data-view-target="home" aria-label="Green Forest home">
+      <span class="landing-brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32"><path d="M25.8 5.7C15.2 5.8 7.1 9.3 7.1 18.1c0 4.7 3.3 7.7 7.6 7.7 8.9 0 11.4-10.7 11.1-20.1Z"/><path d="M5 27c4.7-7.2 9.2-10.9 16.1-14.5"/></svg>
+      </span>
+      <span>Green Forest</span>
+    </a>
+    <button class="landing-menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="landingNavigation">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="landing-navigation" id="landingNavigation" aria-label="Main navigation">
+      <a href="#home" data-view-target="home">Home</a>
+      <a href="#catalog" data-view-target="catalog">Plants</a>
+      <a href="#catalog" data-view-target="catalog" data-catalog-mode="rent">Rent</a>
+      <a href="#catalog" data-view-target="catalog" data-catalog-mode="sale">Buy</a>
+      <a href="#sell" data-view-target="home">Sell</a>
+      <a href="#maintenance" data-view-target="maintenance">Maintenance</a>
+      <a href="#about" data-view-target="about">About</a>
+      <a href="#contact" data-view-target="contact">Contact Us</a>
+    </nav>
+    <div class="landing-header-actions">
+      <a class="landing-login" href="./login.html">Log In</a>
+      <a class="landing-button landing-button-small" href="./register.html">Sign Up</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="landing-view landing-home-view" data-view="home">
+    <section class="landing-hero" id="home">
+      <div class="landing-hero-content">
+        <p class="landing-eyebrow"><span></span> A little more green, every day</p>
+        <h1>Bring nature<br />into your <em>space.</em></h1>
+        <p class="landing-hero-copy">Rent or buy beautiful plants for your home, office, or special events. Discover your perfect plants, delivered with care.</p>
+        <div class="landing-hero-actions">
+          <a class="landing-button" href="#catalog" data-view-target="catalog">Explore plants <span aria-hidden="true">→</span></a>
+          <a class="landing-text-link" href="#categories">Find your green <span aria-hidden="true">↘</span></a>
+        </div>
+        <div class="landing-highlights" aria-label="Our service highlights">
+          <div><span class="landing-highlight-icon" aria-hidden="true">✳</span><span><strong>Wide variety</strong><small>Plants for every space</small></span></div>
+          <div><span class="landing-highlight-icon" aria-hidden="true">↗</span><span><strong>Fast &amp; safe delivery</strong><small>Handled with extra care</small></span></div>
+          <div><span class="landing-highlight-icon" aria-hidden="true">♧</span><span><strong>Eco-friendly</strong><small>Good for you, better for earth</small></span></div>
+        </div>
+      </div>
+      <div class="landing-hero-visual" role="img" aria-label="Sunlit room filled with lush green plants">
+        <div class="landing-hero-caption"><span class="landing-caption-dot"></span><span><strong>Grow where you are</strong><small>Make room for a little more life</small></span></div>
+        <span class="landing-hero-stamp" aria-hidden="true">LIVE<br />A LITTLE<br />GREENER</span>
+      </div>
+      <div class="landing-hero-orb" aria-hidden="true"></div>
+    </section>
+
+    <section class="landing-section landing-categories" id="categories">
+      <div class="landing-section-heading">
+        <div><p class="landing-eyebrow">A plant for every plan</p><h2>What are you looking for?</h2></div>
+        <p>From a forever favorite to a little greenery for the weekend, find the right fit for you.</p>
+      </div>
+      <div class="landing-category-grid">
+        <article class="landing-category-card landing-category-buy">
+          <span class="landing-category-number">01 / MAKE IT YOURS</span>
+          <div class="landing-category-icon" aria-hidden="true">↗</div>
+          <h3>Buy plants</h3>
+          <p>Find the plants you'll love growing at home, season after season.</p>
+          <a href="#catalog" data-view-target="catalog" data-catalog-mode="sale">Shop plants <span aria-hidden="true">→</span></a>
+        </article>
+        <article class="landing-category-card landing-category-rent">
+          <span class="landing-category-number">02 / FLEXIBLE GREEN</span>
+          <div class="landing-category-icon" aria-hidden="true">⌁</div>
+          <h3>Rent plants</h3>
+          <p>Enjoy fresh greenery without the long-term commitment. Easy and lovely.</p>
+          <a href="#catalog" data-view-target="catalog" data-catalog-mode="rent">Browse rentals <span aria-hidden="true">→</span></a>
+        </article>
+        <article class="landing-category-card landing-category-event">
+          <span class="landing-category-number">03 / MAKE IT A MOMENT</span>
+          <div class="landing-category-icon" aria-hidden="true">✳</div>
+          <h3>Event plants</h3>
+          <p>Set the scene for celebrations, gatherings, and the moments worth remembering.</p>
+          <a href="#catalog" data-view-target="catalog" data-catalog-mode="rent">Explore event plants <span aria-hidden="true">→</span></a>
+        </article>
+      </div>
+    </section>
+
+    <section class="landing-sell-banner" id="sell">
+      <div class="landing-sell-mark" aria-hidden="true">♧</div>
+      <div><p class="landing-eyebrow">A place to grow together</p><h2>Are you a plant grower?</h2><p>Share your nursery with plant lovers looking for something special.</p></div>
+      <a class="landing-button landing-button-light" href="./register.html">Join as a seller <span aria-hidden="true">→</span></a>
+    </section>
+    </div>
+
+    <section class="landing-catalog-section landing-view" id="catalog" data-view="catalog" hidden>
+      <div class="landing-section landing-catalog">
+        <div class="landing-section-heading">
+          <div><p class="landing-eyebrow">A fresh pick for your space</p><h2>Find your new favorite</h2></div>
+          <a class="landing-text-link landing-catalog-link" href="#catalog">See what’s growing <span aria-hidden="true">↘</span></a>
+        </div>
+        <div class="landing-catalog-toolbar">
+          <p>Thoughtfully grown. Ready for a new home.</p>
+          <div class="landing-filter-tabs" role="group" aria-label="Filter plant listings">
+            <button type="button" class="active" data-catalog-mode="all" aria-pressed="true">All plants</button>
+            <button type="button" data-catalog-mode="rent" aria-pressed="false">For rent</button>
+            <button type="button" data-catalog-mode="sale" aria-pressed="false">For sale</button>
+          </div>
+        </div>
+        <div class="landing-plant-grid" id="landingPlantGrid" aria-live="polite" aria-busy="true">
+          <p class="landing-catalog-state">Finding something leafy for you…</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="landing-info-section landing-view" id="maintenance" data-view="maintenance" hidden>
+      <div class="landing-section landing-maintenance-content">
+        <header class="landing-info-heading">
+          <p class="landing-eyebrow">Thoughtful care, thriving greenery</p>
+          <h2>Plant care that grows with you.</h2>
+          <p>From everyday attention to seasonal refreshes, our care services help keep your plants healthy, vibrant, and right at home.</p>
+        </header>
+        <div class="landing-service-grid">
+          <article class="landing-service-card"><span class="landing-service-icon" aria-hidden="true">◌</span><span class="landing-service-number">01</span><h3>Regular watering</h3><p>Consistent watering schedules tailored to each plant’s needs and your space.</p></article>
+          <article class="landing-service-card"><span class="landing-service-icon" aria-hidden="true">☼</span><span class="landing-service-number">02</span><h3>Sunlight guidance</h3><p>Practical advice to find the right light and placement for every plant.</p></article>
+          <article class="landing-service-card"><span class="landing-service-icon" aria-hidden="true">✧</span><span class="landing-service-number">03</span><h3>Leaf dust cleaning</h3><p>Gentle cleaning that lets leaves breathe and show off their natural color.</p></article>
+          <article class="landing-service-card"><span class="landing-service-icon" aria-hidden="true">⌁</span><span class="landing-service-number">04</span><h3>Pruning &amp; shaping</h3><p>Thoughtful trimming to encourage healthy growth and a tidy silhouette.</p></article>
+          <article class="landing-service-card"><span class="landing-service-icon" aria-hidden="true">♧</span><span class="landing-service-number">05</span><h3>Seasonal fertilizing</h3><p>Balanced nutrients, applied at the right time to support new growth.</p></article>
+          <article class="landing-service-card"><span class="landing-service-icon" aria-hidden="true">⌕</span><span class="landing-service-number">06</span><h3>Pest &amp; health checks</h3><p>Regular inspections to spot concerns early and keep your plants thriving.</p></article>
+          <article class="landing-service-card"><span class="landing-service-icon" aria-hidden="true">◫</span><span class="landing-service-number">07</span><h3>Repotting &amp; refresh</h3><p>Fresh soil and the right-sized home when your plant is ready to grow.</p></article>
+        </div>
+        <aside class="landing-care-promise">
+          <span class="landing-promise-icon" aria-hidden="true">♧</span>
+          <div><p class="landing-eyebrow">Our care promise</p><h3>We care for every plant as if it were our own.</h3><p>Care recommendations are tailored to your plants, your space, and the seasons—so greener spaces can keep growing.</p></div>
+          <a class="landing-promise-link" href="#contact" data-view-target="contact">Talk with our team <span aria-hidden="true">→</span></a>
+        </aside>
+      </div>
+    </section>
+
+    <section class="landing-info-section landing-about-section landing-view" id="about" data-view="about" hidden>
+      <div class="landing-section landing-about-page">
+        <header class="landing-info-heading landing-about-heading">
+          <p class="landing-eyebrow">Rooted in greener living</p>
+          <h2>A little more nature, made easy.</h2>
+          <p>Green Forest brings people, plants, and local expertise together to make greener homes, workplaces, and moments possible.</p>
+        </header>
+        <section class="landing-values-section" aria-labelledby="landingValuesTitle">
+          <div class="landing-subsection-heading"><div><p class="landing-eyebrow">What guides us</p><h3 id="landingValuesTitle">Botanical vision &amp; core values</h3></div><p>Carefully considered at every step, from choosing a plant to helping it thrive.</p></div>
+          <div class="landing-values-grid">
+            <article class="landing-value-card"><span class="landing-value-icon" aria-hidden="true">↗</span><h4>Eco-friendly delivery</h4><p>Thoughtful handling and delivery practices that put plant health and less waste first.</p></article>
+            <article class="landing-value-card"><span class="landing-value-icon" aria-hidden="true">♧</span><h4>Fully serviced rental</h4><p>Beautiful plants for your space, with ongoing care support throughout the rental.</p></article>
+            <article class="landing-value-card"><span class="landing-value-icon" aria-hidden="true">⌖</span><h4>Local expertise</h4><p>Dhaka-based plant knowledge to help you choose greenery suited to your setting.</p></article>
+          </div>
+        </section>
+        <section class="landing-team-section" aria-labelledby="landingTeamTitle">
+          <div class="landing-subsection-heading"><div><p class="landing-eyebrow">The people behind the leaves</p><h3 id="landingTeamTitle">Meet our botanical team</h3></div><p>Friendly, hands-on plant people, ready to help your green spaces flourish.</p></div>
+          <div class="landing-team-grid">
+            <article class="landing-team-card"><div class="landing-team-avatar landing-avatar-sage" aria-hidden="true">SS</div><p class="landing-team-label">BOTANICAL LEAD</p><h4>SrabonySayed</h4><p class="landing-team-role">Chief Botanist</p><p class="landing-team-bio">Brings a thoughtful eye to plant selection and the details that help greenery thrive.</p></article>
+            <article class="landing-team-card"><div class="landing-team-avatar landing-avatar-olive" aria-hidden="true">JR</div><p class="landing-team-label">PLANT TECHNICIAN</p><h4>Jeba Raisa</h4><p class="landing-team-role">Senior Technician</p><p class="landing-team-bio">Keeps plant installations healthy, balanced, and looking their best in every space.</p></article>
+            <article class="landing-team-card"><div class="landing-team-avatar landing-avatar-clay" aria-hidden="true">IE</div><p class="landing-team-label">PLANT CARE</p><h4>Iffat Esha</h4><p class="landing-team-role">Maintenance Expert</p><p class="landing-team-bio">Helps turn everyday plant care into simple routines that make a lasting difference.</p></article>
+          </div>
+        </section>
+        <section class="landing-impact-section" aria-label="Green Forest impact">
+          <div><strong>500+</strong><span>Premium Plants</span></div>
+          <div><strong>200+</strong><span>Happy Corporate Clients</span></div>
+          <div><strong>5 Years</strong><span>Dhaka Local Experience</span></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="landing-info-section landing-view" id="contact" data-view="contact" hidden>
+      <div class="landing-section landing-contact-page">
+        <div class="landing-contact-content">
+          <div class="landing-contact-details">
+            <header class="landing-contact-heading">
+              <p class="landing-eyebrow">We’re happy to help</p>
+              <h2>Let’s talk plants.</h2>
+              <p>Questions, ideas, or looking for the right greenery? Reach out to our team—we’d love to hear from you.</p>
+            </header>
+            <p class="landing-contact-kicker">GET IN TOUCH</p>
+            <article class="landing-contact-card"><span class="landing-contact-icon" aria-hidden="true">⌖</span><div><h3>Dhaka office</h3><p>Dhaka, Bangladesh</p></div></article>
+            <article class="landing-contact-card"><span class="landing-contact-icon" aria-hidden="true">☎</span><div><h3>Call our team</h3><a href="tel:+12234">+12234</a></div></article>
+            <article class="landing-contact-card"><span class="landing-contact-icon" aria-hidden="true">✉</span><div><h3>Email us</h3><a href="mailto:hello@greenforest.example">hello@greenforest.example</a></div></article>
+            <article class="landing-contact-card"><span class="landing-contact-icon" aria-hidden="true">◷</span><div><h3>Customer support</h3><p>Sunday–Thursday, 9 AM–5 PM<br />Bangladesh Standard Time (UTC+6)</p></div></article>
+            <p class="landing-contact-note">You can also send us a message using the form. No account needed.</p>
+          </div>
+          <form class="landing-contact-form" id="landingContactForm" novalidate>
+            <div class="landing-form-heading"><p class="landing-eyebrow">SEND US A MESSAGE</p><h3>Send us a message</h3><p>We’ll get back to you as soon as we can.</p></div>
+            <div class="landing-contact-fields">
+              <div><label for="landingContactName">Your name</label><input id="landingContactName" name="name" type="text" maxlength="100" autocomplete="name" placeholder="Name" required /></div>
+              <div><label for="landingContactEmail">Your email</label><input id="landingContactEmail" name="email" type="email" maxlength="255" autocomplete="email" placeholder="you@example.com" required /></div>
+            </div>
+            <label for="landingContactSubject">Subject</label>
+            <input id="landingContactSubject" name="subject" type="text" maxlength="150" placeholder="What can we help with?" required />
+            <label for="landingContactMessage">Message</label>
+            <textarea id="landingContactMessage" name="message" maxlength="2000" rows="4" placeholder="Tell us a little more…" required></textarea>
+            <p class="landing-contact-feedback" id="landingContactFeedback" role="status" hidden></p>
+            <button class="landing-button" type="submit">Send message <span aria-hidden="true">→</span></button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="landing-footer">
+    <a class="landing-brand" href="#home" data-view-target="home"><span class="landing-brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M25.8 5.7C15.2 5.8 7.1 9.3 7.1 18.1c0 4.7 3.3 7.7 7.6 7.7 8.9 0 11.4-10.7 11.1-20.1Z"/><path d="M5 27c4.7-7.2 9.2-10.9 16.1-14.5"/></svg></span><span>Green Forest</span></a>
+    <p>Grow a little greener, wherever life takes you.</p>
+    <div><a href="#about" data-view-target="about">About</a><a href="#contact" data-view-target="contact">Contact</a><a href="#maintenance" data-view-target="maintenance">Plant care</a></div>
+    <small>© <span id="landingYear"></span> Green Forest. Rooted in good things.</small>
+  </footer>
+
+  <div class="landing-modal-backdrop" id="landingAuthModal" hidden>
+    <section class="landing-auth-modal" role="dialog" aria-modal="true" aria-labelledby="landingAuthTitle">
+      <button class="landing-modal-close" type="button" aria-label="Close sign in dialog">×</button>
+      <div class="landing-modal-brand"><span class="landing-brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M25.8 5.7C15.2 5.8 7.1 9.3 7.1 18.1c0 4.7 3.3 7.7 7.6 7.7 8.9 0 11.4-10.7 11.1-20.1Z"/><path d="M5 27c4.7-7.2 9.2-10.9 16.1-14.5"/></svg></span>Green Forest</div>
+      <p class="landing-eyebrow">Your greener space is waiting</p>
+      <h2 id="landingAuthTitle">Welcome back</h2>
+      <p class="landing-modal-intro">Log in to continue with your plants.</p>
+      <div class="landing-auth-message" id="landingAuthMessage" role="status" hidden></div>
+      <form class="landing-auth-form" id="landingLoginForm">
+        <label for="landingLoginEmail">Email address</label>
+        <input id="landingLoginEmail" name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
+        <label for="landingLoginPassword">Password</label>
+        <input id="landingLoginPassword" name="password" type="password" autocomplete="current-password" placeholder="Your password" required />
+        <button class="landing-button landing-auth-submit" type="submit">Log in</button>
+        <p class="landing-auth-switch">Don't have an account? <button type="button" data-auth-switch="register">Sign up here</button></p>
+      </form>
+      <form class="landing-auth-form" id="landingRegisterForm" hidden>
+        <label for="landingRegisterName">Full name</label>
+        <input id="landingRegisterName" name="name" type="text" autocomplete="name" minlength="2" placeholder="Your name" required />
+        <label for="landingRegisterEmail">Email address</label>
+        <input id="landingRegisterEmail" name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
+        <label for="landingRegisterRole">I am a</label>
+        <select id="landingRegisterRole" name="role"><option value="User">Customer</option><option value="Nursery">Nursery owner</option></select>
+        <label for="landingRegisterPassword">Password</label>
+        <input id="landingRegisterPassword" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required />
+        <label for="landingRegisterConfirm">Confirm password</label>
+        <input id="landingRegisterConfirm" name="confirmPassword" type="password" autocomplete="new-password" placeholder="Repeat your password" required />
+        <button class="landing-button landing-auth-submit" type="submit">Create account</button>
+        <p class="landing-auth-switch">Already have an account? <button type="button" data-auth-switch="login">Log in here</button></p>
+      </form>
+    </section>
+  </div>
+
+  <script src="./js/app.js"></script>
+</body>
+</html>

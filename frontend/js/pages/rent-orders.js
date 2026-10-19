@@ -5,43 +5,109 @@ function initRentOrders() {
   }
 
   const tbody = document.getElementById("rentOrdersTableBody");
+  const transitions = {
+    Pending: ["Confirmed", "Cancelled"],
+    Confirmed: ["Active", "Cancelled"],
+    Active: ["Completed"],
+  };
+
+  function addCell(row, value) {
+    const cell = row.insertCell();
+    cell.style.padding = "1rem";
+    cell.textContent = value;
+    return cell;
+  }
 
   async function loadRentOrders() {
     try {
-      const orders = await apiRequest("/api/v1/rentals/owner", { auth: true });
-      if (!orders || orders.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 2rem; color: #666;">No rental orders found.</td></tr>`;
+      const orders = await apiRequest("/rentals/owner", { auth: true });
+      tbody.replaceChildren();
+      if (orders.length === 0) {
+        const row = tbody.insertRow();
+        const cell = row.insertCell();
+        cell.colSpan = 8;
+        cell.style.textAlign = "center";
+        cell.textContent = "No rental orders found.";
         return;
       }
 
-      tbody.innerHTML = "";
-      orders.forEach(order => {
-        const row = document.createElement("tr");
+      orders.forEach((order) => {
+        const row = tbody.insertRow();
         row.style.borderBottom = "1px solid #f0f0f0";
-        row.innerHTML = `
-          <td style="padding: 1rem; font-weight: 600;">#RENT-${order.id}</td>
-          <td style="padding: 1rem;">${order.customer_name || 'Customer'}</td>
-          <td style="padding: 1rem;">${order.plant_name}</td>
-          <td style="padding: 1rem;">${order.quantity}</td>
-          <td style="padding: 1rem; color: #666;">${order.rental_period || 'N/A'}</td>
-          <td style="padding: 1rem; font-weight: 700; color: #137333;">৳${order.total_amount}</td>
-          <td style="padding: 1rem;"><span class="badge ${order.status.toLowerCase()}">${order.status}</span></td>
-          <td style="padding: 1rem;"><button onclick="viewOrderDetails(${order.id})" style="background: #f1f3f4; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-weight: 600;">View Details</button></td>
-        `;
-        tbody.appendChild(row);
+        addCell(row, `#RENT-${order.id}`);
+        addCell(row, order.customer_name);
+        addCell(row, order.plant_name);
+        addCell(row, String(order.quantity));
+        addCell(
+          row,
+          `${order.rental_start_date} – ${order.rental_end_date} (${order.rental_duration_days} day(s))`
+        );
+        addCell(row, `৳${Number(order.total_amount).toFixed(2)}`);
+
+        const statusCell = addCell(row, order.status);
+        const badge = document.createElement("span");
+        badge.className = `badge ${order.status.toLowerCase()}`;
+        badge.textContent = order.status;
+        statusCell.replaceChildren(badge);
+
+        const actionCell = row.insertCell();
+        const nextStatuses = transitions[order.status] || [];
+        if (nextStatuses.length === 0) {
+          actionCell.textContent = "No further actions";
+          return;
+        }
+
+        const statusSelect = document.createElement("select");
+        statusSelect.setAttribute("aria-label", `Update rental ${order.id} status`);
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Select status";
+        statusSelect.append(placeholder);
+        nextStatuses.forEach((nextStatus) => {
+          const option = document.createElement("option");
+          option.value = nextStatus;
+          option.textContent = nextStatus;
+          statusSelect.append(option);
+        });
+
+        const updateButton = document.createElement("button");
+        updateButton.type = "button";
+        updateButton.className = "btn btn-primary";
+        updateButton.textContent = "Update";
+        updateButton.addEventListener("click", async () => {
+          if (!statusSelect.value) {
+            showMessage("Select a valid next status.");
+            return;
+          }
+          updateButton.disabled = true;
+          try {
+            await apiRequest(`/rentals/owner/${order.id}/status`, {
+              method: "PATCH",
+              auth: true,
+              body: { status: statusSelect.value },
+            });
+            showMessage(`Rental #${order.id} updated.`, "success");
+            await loadRentOrders();
+          } catch (error) {
+            showMessage(error.message);
+            updateButton.disabled = false;
+          }
+        });
+        actionCell.append(statusSelect, updateButton);
       });
-    } catch (err) {
-      showMessage(err.message, "error");
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 2rem; color: red;">Failed to load orders.</td></tr>`;
+    } catch (error) {
+      showMessage(error.message, "error");
+      tbody.replaceChildren();
+      const row = tbody.insertRow();
+      const cell = row.insertCell();
+      cell.colSpan = 8;
+      cell.style.textAlign = "center";
+      cell.textContent = "Failed to load orders.";
     }
   }
 
   loadRentOrders();
 }
-
-window.viewOrderDetails = function(orderId) {
-  showMessage(`Opening details for order #${orderId}`, "success");
-};
 
 document.addEventListener("DOMContentLoaded", () => {
   if (document.body.dataset.page === "rent-orders") {

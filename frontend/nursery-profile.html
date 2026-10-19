@@ -29,15 +29,19 @@
             </div>
             <div class="form-group">
               <label for="ownerEmail">Owner Email</label>
-              <input type="email" id="ownerEmail" disabled style="background: #f9f9f9;" />
+              <input type="email" id="ownerEmail" />
             </div>
             <div class="form-group">
               <label for="contactNumber">Contact Number</label>
-              <input type="text" id="contactNumber" placeholder="+880..." />
+              <input type="text" id="contactNumber" placeholder="+880..." required />
+            </div>
+            <div class="form-group">
+              <label for="city">City</label>
+              <input type="text" id="city" required />
             </div>
             <div class="form-group">
               <label for="location">Location / Address</label>
-              <textarea id="location" rows="2" placeholder="Nursery address..."></textarea>
+              <textarea id="location" rows="2" placeholder="Nursery address..." required></textarea>
             </div>
             <button type="submit" class="btn btn-primary" style="background: #0d3b1e; color: #fff; margin-top: 1rem;">Save Changes</button>
           </form>
