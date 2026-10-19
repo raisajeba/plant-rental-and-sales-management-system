@@ -32,32 +32,6 @@ class OrderOut(BaseModel):
         from_attributes = True
 
 
-class RentalOrderCreate(BaseModel):
-    plant_id: int = Field(gt=0)
-    quantity: int = Field(ge=1, le=1_000_000)
-    rental_months: int = Field(ge=1, le=120)
-
-
-class OrderHistoryItemOut(BaseModel):
-    id: int
-    plant_id: int
-    plant_name: str
-    quantity: int
-    unit_price: float
-    total_price: float
-    rental_months: int | None = None
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class OrderHistoryOut(BaseModel):
-    id: int
-    order_type: str
-    total_amount: float
-    status: str
-    created_at: datetime
-    items: List[OrderHistoryItemOut]
-
 class OwnerOrderItemOut(BaseModel):
     plant_id: int
     plant_name: str
@@ -74,19 +48,9 @@ class OwnerOrderOut(BaseModel):
     order_date: datetime
     items: List[OwnerOrderItemOut]
 
-
+# --- Jira Feature: Order Status Update Request Schema ---
 class OrderStatusUpdate(BaseModel):
-    status: OrderStatus
-
-
-class RentalOrderOut(BaseModel):
-    id: int
-    user_id: int
-    plant_id: int
-    quantity: int
-    rental_months: int
-    total_amount: float
-    status: str
-    created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
+    status: OrderStatus = Field(
+        ..., 
+        description="Must be one of: Pending, Confirmed, Processing, Completed, Cancelled"
+    )

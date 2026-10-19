@@ -10,12 +10,15 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     API_V1_PREFIX: str = "/api/v1"
 
-    # Database
+    # Database: DATABASE_URL দিলে সরাসরি সেটি ব্যবহার করবে (যেমন SQLite)
+    DATABASE_URL: str | None = None
+
+    # MySQL Fallback Settings (এখন এগুলো অপশনাল করা হয়েছে)
     DB_HOST: str = "localhost"
     DB_PORT: int = 3306
-    DB_NAME: str
-    DB_USER: str
-    DB_PASSWORD: str
+    DB_NAME: str = "greennest"
+    DB_USER: str = "greennest_user"
+    DB_PASSWORD: str = "sraboni"
 
     # JWT
     SECRET_KEY: str
@@ -33,6 +36,13 @@ class Settings(BaseSettings):
     @classmethod
     def trim_admin_name(cls, value: str | None) -> str | None:
         return value.strip() if value else value
+
+    @property
+    def sync_database_url(self) -> str:
+        """DATABASE_URL থাকলে সেটি নেবে, না থাকলে MySQL URL তৈরি করবে।"""
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
+        return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
