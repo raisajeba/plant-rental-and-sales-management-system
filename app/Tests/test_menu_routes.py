@@ -3,7 +3,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
-from app.core.constants import MENU_PAGES, NURSERY_MENU_PAGES
+from app.core.constants import ADMIN_MENU_PAGES, MENU_PAGES, NURSERY_MENU_PAGES
 from app.models import Page, Role, RolePage
 from app.seed import seed_initial_data
 
@@ -48,6 +48,9 @@ def test_seeded_menus_match_role_specific_frontend_routes():
     assert [(url, name) for name, url, _ in NURSERY_MENU_PAGES] == [
         (url, name) for url, name, _ in expected_nursery
     ]
+    assert _frontend_routes(layout_source, "Admin") == [
+        ("/admin", "Admin", "admin.html")
+    ]
 
 
 def test_menu_seed_assigns_pages_only_to_the_matching_role(db_session):
@@ -69,7 +72,7 @@ def test_menu_seed_assigns_pages_only_to_the_matching_role(db_session):
 
     assert assigned_pages["User"] == {url for _, url, _ in MENU_PAGES}
     assert assigned_pages["Nursery"] == {url for _, url, _ in NURSERY_MENU_PAGES}
-    assert assigned_pages["Admin"] == set()
+    assert assigned_pages["Admin"] == {url for _, url, _ in ADMIN_MENU_PAGES}
 
 
 def test_every_portal_page_uses_the_shared_role_guard():
@@ -95,6 +98,7 @@ def test_every_portal_page_uses_the_shared_role_guard():
         "nursery-maintainance.html",
         "nursery-profile.html",
     )
+    admin_pages = ("admin.html",)
 
     for page in customer_pages:
         source = (project_root / "frontend" / page).read_text(encoding="utf-8")
@@ -104,4 +108,9 @@ def test_every_portal_page_uses_the_shared_role_guard():
     for page in nursery_pages:
         source = (project_root / "frontend" / page).read_text(encoding="utf-8")
         assert 'data-layout="nursery"' in source
+        assert 'src="js/layout.js"' in source
+
+    for page in admin_pages:
+        source = (project_root / "frontend" / page).read_text(encoding="utf-8")
+        assert 'data-layout="admin"' in source
         assert 'src="js/layout.js"' in source

@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.database import Base, SessionLocal, check_db_connection, engine
 from app.routers import (
     about,
+    admin,
     auth,
     cart,
     contact,
@@ -101,6 +102,7 @@ app.add_middleware(
 # ---------------------------------------------------------
 for r in (
     auth.router,
+    admin.router,
     users.router,
     nurseries.router,
     plants.router,

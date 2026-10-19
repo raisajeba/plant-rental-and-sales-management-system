@@ -1,7 +1,14 @@
 from datetime import datetime
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from app.core.constants import AvailabilityStatus
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    field_validator,
+    model_validator,
+)
+from app.core.constants import AvailabilityStatus, ListingApprovalStatus
 
 _SALE_STATUSES = {AvailabilityStatus.FOR_SALE, AvailabilityStatus.FOR_BOTH}
 _RENT_STATUSES = {AvailabilityStatus.FOR_RENT, AvailabilityStatus.FOR_BOTH}
@@ -76,6 +83,7 @@ class PlantOut(BaseModel):
     rent_price: float | None = None
     available_quantity: int
     availability_status: str
+    approval_status: ListingApprovalStatus
     care_instructions: str | None = None
     created_at: datetime
     updated_at: datetime
@@ -87,8 +95,13 @@ class PlantSearchOut(PlantOut):
     nursery_name: str
 
 
-# Rebuild Pydantic models to resolve forward references
-PlantCreate.model_rebuild()
-PlantUpdate.model_rebuild()
-PlantOut.model_rebuild()
-PlantSearchOut.model_rebuild()
+class AdminPlantOut(PlantOut):
+    nursery_name: str
+    nursery_owner_id: int
+    nursery_owner_name: str
+    nursery_owner_email: EmailStr
+
+
+class AdminPlantUpdate(BaseModel):
+    availability_status: AvailabilityStatus
+    available_quantity: int | None = Field(default=None, ge=0, le=1_000_000)

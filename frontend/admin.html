@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin | Green Forest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body data-page="admin" data-layout="admin">
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+
+    <div class="main">
+      <header class="topbar"><h1>Admin</h1></header>
+      <main class="content">
+        <div id="message" class="alert hidden" role="status"></div>
+        <section class="card" aria-labelledby="pendingHeading">
+          <h2 id="pendingHeading">Pending account approvals</h2>
+          <p class="page-intro">Review new accounts before granting system access.</p>
+          <div style="overflow-x: auto;">
+            <table class="order-history-table">
+              <thead>
+                <tr>
+                  <th scope="col">User ID</th>
+                  <th scope="col">Name</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Role</th>
+                  <th scope="col">Registered</th>
+                  <th scope="col">Action</th>
+                </tr>
+              </thead>
+              <tbody id="pendingAccounts">
+                <tr><td class="order-history-state" colspan="6">Loading pending accounts...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="usersHeading">
+          <h2 id="usersHeading">User access management</h2>
+          <p class="page-intro">Update account roles and access status.</p>
+          <div style="overflow-x: auto;">
+            <table class="order-history-table">
+              <thead>
+                <tr>
+                  <th scope="col">User ID</th>
+                  <th scope="col">Name</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Role</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Approval</th>
+                  <th scope="col">Registered</th>
+                  <th scope="col">Manage</th>
+                </tr>
+              </thead>
+              <tbody id="adminUsers">
+                <tr><td class="order-history-state" colspan="8">Loading users...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="nurseriesHeading" style="margin-top: 24px;">
+          <h2 id="nurseriesHeading">Nursery accounts</h2>
+          <p class="page-intro">Review nursery information and manage account availability.</p>
+          <div style="overflow-x: auto;">
+            <table class="order-history-table">
+              <thead>
+                <tr>
+                  <th scope="col">ID</th>
+                  <th scope="col">Nursery</th>
+                  <th scope="col">Owner</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Phone</th>
+                  <th scope="col">City</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Manage</th>
+                </tr>
+              </thead>
+              <tbody id="adminNurseries">
+                <tr><td class="order-history-state" colspan="8">Loading nursery accounts...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="pendingPlantsHeading" style="margin-top: 24px;">
+          <h2 id="pendingPlantsHeading">Pending plant listings</h2>
+          <p class="page-intro">Review nursery submissions before making them visible to customers.</p>
+          <div style="overflow-x: auto;">
+            <table class="order-history-table">
+              <thead>
+                <tr>
+                  <th scope="col">ID</th>
+                  <th scope="col">Plant</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Nursery</th>
+                  <th scope="col">Owner</th>
+                  <th scope="col">Availability</th>
+                  <th scope="col">Registered</th>
+                  <th scope="col">Review</th>
+                </tr>
+              </thead>
+              <tbody id="pendingPlants">
+                <tr><td class="order-history-state" colspan="8">Loading pending listings...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="plantsHeading" style="margin-top: 24px;">
+          <h2 id="plantsHeading">Plant listings</h2>
+          <p class="page-intro">View all listings and manage approved listing availability.</p>
+          <div style="overflow-x: auto;">
+            <table class="order-history-table">
+              <thead>
+                <tr>
+                  <th scope="col">ID</th>
+                  <th scope="col">Plant</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Nursery</th>
+                  <th scope="col">Approval</th>
+                  <th scope="col">Availability</th>
+                  <th scope="col">Quantity</th>
+                  <th scope="col">Manage</th>
+                </tr>
+              </thead>
+              <tbody id="adminPlants">
+                <tr><td class="order-history-state" colspan="8">Loading plant listings...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/pages/admin.js"></script>
+</body>
+</html>

@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 from starlette.datastructures import UploadFile
 
-from app.core.constants import AvailabilityStatus, RoleName
+from app.core.constants import AvailabilityStatus, ListingApprovalStatus, RoleName
 from app.crud import nursery as crud_nursery
 from app.database import get_db
 from app.dependencies.auth import require_roles
@@ -206,21 +206,11 @@ async def add_plant_to_nursery(
 
     data = payload.model_dump()
     data["availability_status"] = payload.availability_status.value
-    image_path = None
-    if image_data is not None and image_extension is not None:
-        filename = f"plant_{uuid4().hex}{image_extension}"
-        image_path = PLANT_IMAGE_DIR / filename
-        try:
-            PLANT_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
-            image_path.write_bytes(image_data)
-        except OSError as error:
-            raise HTTPException(
-                status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "The plant image could not be saved",
-            ) from error
-        data["image_url"] = f"/uploads/plants/{filename}"
-
-    plant = Plant(nursery_id=nursery.id, **data)
+    plant = Plant(
+        nursery_id=nursery.id,
+        approval_status=ListingApprovalStatus.PENDING.value,
+        **data,
+    )
     db.add(plant)
     try:
         db.commit()
@@ -252,7 +242,10 @@ def list_nursery_plants(
     if nursery is None or nursery.status != "active":
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Nursery not found")
 
-    stmt = select(Plant).where(Plant.nursery_id == nursery_id)
+    stmt = select(Plant).where(
+        Plant.nursery_id == nursery_id,
+        Plant.approval_status == ListingApprovalStatus.APPROVED.value,
+    )
     if category:
         stmt = stmt.where(Plant.category.ilike(category))
     if availability:

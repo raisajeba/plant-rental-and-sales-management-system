@@ -1,6 +1,7 @@
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
+from app.core.constants import ListingApprovalStatus
 from app.models.plant import Plant
 from app.models.cart_item import CartItem
 from app.models.order import Order, OrderItem, RentalOrder
@@ -24,6 +25,11 @@ def create_purchase_order_from_cart(db: Session, user_id: int) -> Order:
         plant = db.query(Plant).filter(Plant.id == cart_item.plant_id).with_for_update().first()
         
         if not plant:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Plant with ID {cart_item.plant_id} not found."
+            )
+        if plant.approval_status != ListingApprovalStatus.APPROVED.value:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Plant with ID {cart_item.plant_id} not found."
@@ -97,6 +103,29 @@ def get_orders_for_nursery_owner(db: Session, owner_id: int) -> List[Order]:
         .distinct()
         .all()
     )
+    if (
+        plant is None
+        or plant.approval_status != ListingApprovalStatus.APPROVED.value
+        or plant.nursery.status != "active"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Plant not found",
+        )
+    if (
+        plant.rent_price is None
+        or plant.rent_price <= 0
+        or plant.availability_status not in ("available_for_rent", "available_for_both")
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This plant is not available for rent",
+        )
+    if plant.available_quantity < quantity:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Requested quantity exceeds available stock",
+        )
 
 
 def get_order_by_id_for_owner(db: Session, order_id: int, owner_id: int) -> Optional[Order]:

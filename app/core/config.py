@@ -1,5 +1,7 @@
 """Application settings, loaded from environment variables / .env file."""
 from functools import lru_cache
+
+from pydantic import EmailStr, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,9 +28,14 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = ["http://localhost:5500", "http://127.0.0.1:5500"]
 
     # Optional first-admin seed
-    ADMIN_NAME: str | None = None
-    ADMIN_EMAIL: str | None = None
-    ADMIN_PASSWORD: str | None = None
+    ADMIN_NAME: str | None = Field(default=None, min_length=2, max_length=100)
+    ADMIN_EMAIL: EmailStr | None = None
+    ADMIN_PASSWORD: str | None = Field(default=None, min_length=12)
+
+    @field_validator("ADMIN_NAME", mode="before")
+    @classmethod
+    def trim_admin_name(cls, value: str | None) -> str | None:
+        return value.strip() if value else value
 
     @property
     def sync_database_url(self) -> str:

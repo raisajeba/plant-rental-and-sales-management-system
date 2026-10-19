@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.constants import ApprovalStatus, UserStatus
 from app.core.security import (
     DUMMY_HASH,
     create_access_token,
@@ -39,6 +40,8 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
         email=payload.email,
         password=hash_password(payload.password),
         role_id=role.id,
+        status=UserStatus.INACTIVE.value,
+        approval_status=ApprovalStatus.PENDING.value,
     )
     db.add(user)
     try:
@@ -68,6 +71,8 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             "Invalid email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    if user.approval_status != ApprovalStatus.APPROVED.value:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Account is not approved")
     if user.status != "active":
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Account is not active")
     if user.role.status != "active":
