@@ -1,0 +1,50 @@
+:root {
+  color-scheme: light;
+  --greennest-deep: #0f4d1f;
+  --greennest-soft: #f3f8f2;
+}
+
+body {
+  background: var(--greennest-soft);
+}
+
+.admin-auth-page {
+  background:
+    radial-gradient(ellipse at 85% 10%, rgba(88, 143, 89, 0.14), transparent 38%),
+    var(--greennest-soft);
+}
+
+.admin-auth-card {
+  max-width: 31rem;
+  border: 1px solid rgba(15, 77, 31, 0.1);
+  border-radius: 1rem;
+}
+
+.admin-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--greennest-deep);
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.admin-brand-mark {
+  display: inline-grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 0.55rem;
+  background: var(--greennest-deep);
+  color: #fff;
+  font-size: 1rem;
+}
+
+.admin-dashboard-page {
+  min-height: 100vh;
+}
+
+.admin-dashboard-page .navbar {
+  min-height: 4.5rem;
+}

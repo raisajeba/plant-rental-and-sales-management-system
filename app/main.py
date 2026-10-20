@@ -13,6 +13,7 @@ import app.models  # noqa: F401
 from app.core.config import settings
 from app.database import Base, SessionLocal, check_db_connection, engine
 from app.routers import (
+    admin,
     about,
     auth,
     cart,
@@ -100,6 +101,8 @@ app.add_middleware(
 # Routers
 # ---------------------------------------------------------
 for r in (
+    admin.auth_router,
+    admin.router,
     auth.router,
     users.router,
     nurseries.router,
