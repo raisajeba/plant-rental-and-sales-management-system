@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.constants import RoleName
+from app.core.constants import RoleName, UserStatus
 from app.core.security import DUMMY_HASH, create_access_token, verify_password
 from app.database import get_db
 from app.dependencies.auth import require_roles
@@ -67,9 +67,22 @@ router = APIRouter(
 def list_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
+    status: UserStatus | None = None,
     db: Session = Depends(get_db),
 ):
-    return db.scalars(select(User).order_by(User.id).offset(skip).limit(limit)).all()
+    query = select(User).order_by(User.id)
+    if status is not None:
+        query = query.where(User.status == status.value)
+    query = query.offset(skip).limit(limit)
+    return db.scalars(query).all()
+
+
+@router.get("/users/{user_id}", response_model=UserOut)
+def get_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    return user
 
 
 @router.patch("/users/{user_id}", response_model=UserOut)
@@ -92,6 +105,24 @@ def update_user(
     if payload.status is not None:
         user.status = payload.status.value
 
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@router.post("/users/{user_id}/approve", response_model=UserOut)
+def approve_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_roles(RoleName.ADMIN)),
+):
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    if user.id == admin.id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "You cannot change your own account state")
+
+    user.status = UserStatus.ACTIVE.value
     db.commit()
     db.refresh(user)
     return user

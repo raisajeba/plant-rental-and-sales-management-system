@@ -101,3 +101,49 @@ def test_non_admin_cannot_login_or_access_admin_routes(admin_test_client):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 403
+
+
+def test_admin_can_filter_and_approve_users(admin_test_client):
+    client, db_session = admin_test_client
+    admin_role = Role(role_name=RoleName.ADMIN.value)
+    user_role = Role(role_name=RoleName.USER.value)
+    db_session.add_all([admin_role, user_role])
+    db_session.flush()
+
+    admin_user = User(
+        name="Garden Admin",
+        email="admin@example.com",
+        password=hash_password("StrongPassword123"),
+        role_id=admin_role.id,
+        status="active",
+    )
+    pending_user = User(
+        name="New Grower",
+        email="grower@example.com",
+        password=hash_password("StrongPassword123"),
+        role_id=user_role.id,
+        status="inactive",
+    )
+    db_session.add_all([admin_user, pending_user])
+    db_session.commit()
+
+    login = client.post(
+        "/api/v1/admin/login",
+        json={"email": "admin@example.com", "password": "StrongPassword123"},
+    )
+    assert login.status_code == 200
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    filtered = client.get("/api/v1/admin/users?status=inactive", headers=headers)
+    assert filtered.status_code == 200
+    assert len(filtered.json()) == 1
+    assert filtered.json()[0]["email"] == "grower@example.com"
+
+    approve = client.post(f"/api/v1/admin/users/{pending_user.id}/approve", headers=headers)
+    assert approve.status_code == 200
+    assert approve.json()["status"] == "active"
+
+    active_users = client.get("/api/v1/admin/users?status=active", headers=headers)
+    assert active_users.status_code == 200
+    emails = {user["email"] for user in active_users.json()}
+    assert {"admin@example.com", "grower@example.com"}.issubset(emails)

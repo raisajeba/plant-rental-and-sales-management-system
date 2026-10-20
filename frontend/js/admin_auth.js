@@ -104,32 +104,126 @@
     });
   }
 
+  function renderStatusBadge(status) {
+    const value = status || "inactive";
+    const badge = document.createElement("span");
+    badge.className = `badge rounded-pill ${
+      value === "active" ? "bg-success-subtle text-success-emphasis" :
+      value === "blocked" ? "bg-danger-subtle text-danger-emphasis" :
+      "bg-warning-subtle text-warning-emphasis"
+    }`;
+    badge.textContent = value;
+    return badge;
+  }
+
   async function loadUsers() {
     const tableBody = document.getElementById("adminUsers");
     const refreshButton = document.getElementById("refreshUsersButton");
+    const statusFilter = document.getElementById("userStatusFilter");
     refreshButton.disabled = true;
     try {
-      const users = await request("/admin/users?limit=200");
+      const params = new URLSearchParams({ limit: "200" });
+      if (statusFilter && statusFilter.value !== "all") {
+        params.set("status", statusFilter.value);
+      }
+      const users = await request(`/admin/users?${params.toString()}`);
       tableBody.replaceChildren();
       if (!users.length) {
         const row = tableBody.insertRow();
         const cell = row.insertCell();
-        cell.colSpan = 4;
+        cell.colSpan = 5;
         cell.className = "text-secondary text-center py-4";
         cell.textContent = "No accounts to display.";
         return;
       }
       for (const user of users) {
         const row = tableBody.insertRow();
-        for (const value of [
-          user.name,
-          user.email,
-          user.role?.role_name || "Unknown",
-          user.status,
-        ]) {
-          const cell = row.insertCell();
-          cell.textContent = value;
+
+        const nameCell = row.insertCell();
+        nameCell.textContent = user.name;
+
+        const emailCell = row.insertCell();
+        emailCell.textContent = user.email;
+
+        const roleCell = row.insertCell();
+        roleCell.textContent = user.role?.role_name || "Unknown";
+
+        const statusCell = row.insertCell();
+        statusCell.appendChild(renderStatusBadge(user.status));
+
+        const actionCell = row.insertCell();
+        const actionGroup = document.createElement("div");
+        actionGroup.className = "d-flex flex-wrap gap-2 align-items-center";
+
+        const select = document.createElement("select");
+        select.className = "form-select form-select-sm w-auto";
+        select.setAttribute("aria-label", `Update status for ${user.name}`);
+        ["active", "inactive", "blocked"].forEach((optionValue) => {
+          const option = document.createElement("option");
+          option.value = optionValue;
+          option.textContent = optionValue;
+          option.selected = optionValue === (user.status || "inactive");
+          select.appendChild(option);
+        });
+
+        const updateButton = document.createElement("button");
+        updateButton.type = "button";
+        updateButton.className = "btn btn-sm btn-outline-success";
+        updateButton.textContent = "Save";
+        updateButton.addEventListener("click", async () => {
+          updateButton.disabled = true;
+          updateButton.textContent = "Saving…";
+          try {
+            await request(`/admin/users/${user.id}`, {
+              method: "PATCH",
+              body: { status: select.value },
+            });
+            showMessage(`Updated ${user.name}'s status to ${select.value}.`, "success");
+            await loadUsers();
+          } catch (error) {
+            if (error.status === 401 || error.status === 403) {
+              clearToken();
+              window.location.replace("admin-login.html");
+              return;
+            }
+            showMessage(error.message, "danger");
+          } finally {
+            updateButton.disabled = false;
+            updateButton.textContent = "Save";
+          }
+        });
+
+        const approveButton = document.createElement("button");
+        approveButton.type = "button";
+        approveButton.className = "btn btn-sm btn-success";
+        approveButton.textContent = "Approve";
+        approveButton.disabled = user.status === "active";
+        approveButton.addEventListener("click", async () => {
+          approveButton.disabled = true;
+          approveButton.textContent = "Approving…";
+          try {
+            await request(`/admin/users/${user.id}/approve`, { method: "POST" });
+            showMessage(`${user.name} is now active.`, "success");
+            await loadUsers();
+          } catch (error) {
+            if (error.status === 401 || error.status === 403) {
+              clearToken();
+              window.location.replace("admin-login.html");
+              return;
+            }
+            showMessage(error.message, "danger");
+          } finally {
+            approveButton.disabled = false;
+            approveButton.textContent = "Approve";
+          }
+        });
+
+        actionGroup.appendChild(select);
+        actionGroup.appendChild(updateButton);
+        if (user.status !== "active") {
+          actionGroup.appendChild(approveButton);
         }
+        actionCell.appendChild(actionGroup);
       }
     } catch (error) {
       if (error.status === 401 || error.status === 403) {
@@ -148,6 +242,10 @@
     if (!token()) {
       window.location.replace("admin-login.html");
       return;
+    }
+    const statusFilter = document.getElementById("userStatusFilter");
+    if (statusFilter) {
+      statusFilter.addEventListener("change", loadUsers);
     }
     document.getElementById("refreshUsersButton").addEventListener("click", loadUsers);
     document.getElementById("adminLogoutButton").addEventListener("click", async (event) => {
