@@ -380,3 +380,46 @@ def test_admin_can_manage_nurseries_and_plant_catalog(admin_test_client):
     approve_plant = client.post(f"/api/v1/admin/plants/{plant.id}/approve", headers=headers)
     assert approve_plant.status_code == 200
     assert approve_plant.json()["availability_status"] in {"available_for_sale", "available_for_rent", "available_for_both"}
+
+
+def test_admin_dashboard_summary_is_authenticated_and_returns_metrics(admin_test_client):
+    client, db_session = admin_test_client
+    admin_role = Role(role_name=RoleName.ADMIN.value)
+    user_role = Role(role_name=RoleName.USER.value)
+    db_session.add_all([admin_role, user_role])
+    db_session.flush()
+    admin_user = User(
+        name="Summary Admin",
+        email="summary-admin@example.com",
+        password=hash_password("StrongPassword123"),
+        role_id=admin_role.id,
+    )
+    normal_user = User(
+        name="Summary User",
+        email="summary-user@example.com",
+        password=hash_password("StrongPassword123"),
+        role_id=user_role.id,
+    )
+    db_session.add_all([admin_user, normal_user])
+    db_session.commit()
+
+    login = client.post(
+        "/api/v1/admin/login",
+        json={"email": "summary-admin@example.com", "password": "StrongPassword123"},
+    )
+    admin_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    response = client.get("/api/v1/admin/dashboard/summary", headers=admin_headers)
+
+    assert response.status_code == 200
+    summary = response.json()
+    assert summary["users"] == {"total": 2, "active": 2, "inactive": 0, "blocked": 0}
+    assert summary["purchase_orders"]["total"] == 0
+    assert summary["rental_orders"]["total"] == 0
+    assert summary["maintenance_records"]["total"] == 0
+
+    user_token, _ = create_access_token(normal_user.id, RoleName.USER.value)
+    denied = client.get(
+        "/api/v1/admin/dashboard/summary",
+        headers={"Authorization": f"Bearer {user_token}"},
+    )
+    assert denied.status_code == 403

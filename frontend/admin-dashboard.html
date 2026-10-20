@@ -18,12 +18,67 @@
     </div>
   </header>
   <main class="container py-4 py-md-5">
-    <div class="mb-4">
-      <p class="text-uppercase small fw-semibold text-success mb-2">Administration</p>
-      <h1 class="h2 mb-2">User management</h1>
-      <p class="text-secondary mb-0">Review GreenNest accounts, keep their status up to date, and approve new sign-ups.</p>
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-4">
+      <div>
+        <p class="text-uppercase small fw-semibold text-success mb-2">Administration</p>
+        <h1 class="h2 mb-2">Operations overview</h1>
+        <p class="text-secondary mb-0">System activity across accounts, listings, orders, and care.</p>
+      </div>
+      <div class="d-flex align-items-center gap-3">
+        <span id="summaryUpdatedAt" class="small text-secondary" aria-live="polite">Waiting for live data</span>
+        <button class="btn btn-sm btn-outline-secondary" id="refreshSummaryButton" type="button">Refresh overview</button>
+      </div>
     </div>
     <div id="adminMessage" class="alert d-none" role="alert" aria-live="polite"></div>
+
+    <section class="mb-5" aria-labelledby="systemSummaryTitle">
+      <h2 class="h5 mb-3" id="systemSummaryTitle">System summary</h2>
+      <div class="row g-3">
+        <div class="col-12 col-sm-6 col-xl-4">
+          <article class="admin-stat">
+            <div class="admin-stat-label">Users</div>
+            <div class="admin-stat-value" id="summaryUsersTotal">—</div>
+            <div class="admin-stat-note" id="summaryUsersNote">Active accounts</div>
+          </article>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-4">
+          <article class="admin-stat admin-stat-teal">
+            <div class="admin-stat-label">Nurseries</div>
+            <div class="admin-stat-value" id="summaryNurseriesTotal">—</div>
+            <div class="admin-stat-note" id="summaryNurseriesNote">Active nurseries</div>
+          </article>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-4">
+          <article class="admin-stat admin-stat-olive">
+            <div class="admin-stat-label">Plant listings</div>
+            <div class="admin-stat-value" id="summaryPlantsTotal">—</div>
+            <div class="admin-stat-note" id="summaryPlantsNote">Available listings</div>
+          </article>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-4">
+          <article class="admin-stat admin-stat-blue">
+            <div class="admin-stat-label">Purchase orders</div>
+            <div class="admin-stat-value" id="summaryPurchaseTotal">—</div>
+            <div class="admin-stat-note" id="summaryPurchaseNote">Pending</div>
+          </article>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-4">
+          <article class="admin-stat admin-stat-coral">
+            <div class="admin-stat-label">Rental orders</div>
+            <div class="admin-stat-value" id="summaryRentalTotal">—</div>
+            <div class="admin-stat-note" id="summaryRentalNote">Pending</div>
+          </article>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-4">
+          <article class="admin-stat admin-stat-sage">
+            <div class="admin-stat-label">Maintenance records</div>
+            <div class="admin-stat-value" id="summaryMaintenanceTotal">—</div>
+            <div class="admin-stat-note" id="summaryMaintenanceNote">Open requests</div>
+          </article>
+        </div>
+      </div>
+    </section>
+
     <section class="card border-0 shadow-sm mb-4">
       <div class="card-header bg-white py-3">
         <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">

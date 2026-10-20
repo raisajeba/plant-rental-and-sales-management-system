@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -108,6 +108,73 @@ def list_users(
         query = query.where(User.status == status.value)
     query = query.offset(skip).limit(limit)
     return db.scalars(query).all()
+
+
+def _count_rows(db: Session, model, *criteria) -> int:
+    query = select(func.count()).select_from(model)
+    if criteria:
+        query = query.where(*criteria)
+    return db.scalar(query) or 0
+
+
+@router.get("/dashboard/summary")
+def admin_dashboard_summary(db: Session = Depends(get_db)):
+    available_plant_statuses = (
+        "available_for_sale",
+        "available_for_rent",
+        "available_for_both",
+    )
+    purchase_pending = (
+        _count_rows(db, PurchaseOrder, PurchaseOrder.order_status == PurchaseOrderStatus.PENDING)
+        + _count_rows(db, Order, Order.status == "Pending")
+    )
+    rental_pending = (
+        _count_rows(db, PlantRentalOrder, PlantRentalOrder.status == RentalStatus.PENDING)
+        + _count_rows(db, RentalOrder, RentalOrder.status == RentalStatus.PENDING.value)
+    )
+    schedule_count = _count_rows(db, MaintenanceSchedule)
+    request_count = _count_rows(db, MaintenanceRequest)
+
+    return {
+        "users": {
+            "total": _count_rows(db, User),
+            "active": _count_rows(db, User, User.status == UserStatus.ACTIVE.value),
+            "inactive": _count_rows(db, User, User.status == UserStatus.INACTIVE.value),
+            "blocked": _count_rows(db, User, User.status == UserStatus.BLOCKED.value),
+        },
+        "nurseries": {
+            "total": _count_rows(db, Nursery),
+            "active": _count_rows(db, Nursery, Nursery.status == "active"),
+        },
+        "plant_listings": {
+            "total": _count_rows(db, Plant),
+            "available": _count_rows(
+                db, Plant, Plant.availability_status.in_(available_plant_statuses)
+            ),
+            "pending_review": _count_rows(
+                db, Plant, Plant.availability_status.in_(("unavailable", "pending_review"))
+            ),
+        },
+        "purchase_orders": {
+            "total": _count_rows(db, PurchaseOrder) + _count_rows(db, Order),
+            "pending": purchase_pending,
+        },
+        "rental_orders": {
+            "total": _count_rows(db, PlantRentalOrder) + _count_rows(db, RentalOrder),
+            "pending": rental_pending,
+        },
+        "maintenance_records": {
+            "total": schedule_count + request_count,
+            "schedules": schedule_count,
+            "pending_schedules": _count_rows(
+                db, MaintenanceSchedule, MaintenanceSchedule.status == MaintenanceStatus.PENDING.value
+            ),
+            "requests": request_count,
+            "open_requests": _count_rows(
+                db, MaintenanceRequest, MaintenanceRequest.status == RequestStatus.OPEN.value
+            ),
+        },
+    }
 
 
 @router.get("/users/{user_id}", response_model=UserOut)
