@@ -116,6 +116,18 @@
     return badge;
   }
 
+  function renderAvailabilityBadge(status) {
+    const value = status || "unavailable";
+    const badge = document.createElement("span");
+    badge.className = `badge rounded-pill ${
+      value === "available_for_sale" || value === "available_for_rent" || value === "available_for_both"
+        ? "bg-success-subtle text-success-emphasis"
+        : "bg-secondary-subtle text-secondary-emphasis"
+    }`;
+    badge.textContent = value.replaceAll("_", " ");
+    return badge;
+  }
+
   async function loadUsers() {
     const tableBody = document.getElementById("adminUsers");
     const refreshButton = document.getElementById("refreshUsersButton");
@@ -238,6 +250,228 @@
     }
   }
 
+  async function loadNurseries() {
+    const tableBody = document.getElementById("adminNurseries");
+    const refreshButton = document.getElementById("refreshNurseriesButton");
+    if (!tableBody || !refreshButton) return;
+    refreshButton.disabled = true;
+    try {
+      const nurseries = await request("/admin/nurseries?limit=200");
+      tableBody.replaceChildren();
+      if (!nurseries.length) {
+        const row = tableBody.insertRow();
+        const cell = row.insertCell();
+        cell.colSpan = 5;
+        cell.className = "text-secondary text-center py-4";
+        cell.textContent = "No nurseries to display.";
+        return;
+      }
+      for (const nursery of nurseries) {
+        const row = tableBody.insertRow();
+        row.insertCell().textContent = nursery.name;
+        row.insertCell().textContent = nursery.owner_id;
+        row.insertCell().textContent = nursery.city;
+        const statusCell = row.insertCell();
+        statusCell.appendChild(renderStatusBadge(nursery.status));
+
+        const actionCell = row.insertCell();
+        const actionGroup = document.createElement("div");
+        actionGroup.className = "d-flex flex-wrap gap-2 align-items-center";
+
+        const select = document.createElement("select");
+        select.className = "form-select form-select-sm w-auto";
+        select.setAttribute("aria-label", `Update status for ${nursery.name}`);
+        ["active", "inactive"].forEach((optionValue) => {
+          const option = document.createElement("option");
+          option.value = optionValue;
+          option.textContent = optionValue;
+          option.selected = optionValue === (nursery.status || "inactive");
+          select.appendChild(option);
+        });
+
+        const updateButton = document.createElement("button");
+        updateButton.type = "button";
+        updateButton.className = "btn btn-sm btn-outline-success";
+        updateButton.textContent = "Save";
+        updateButton.addEventListener("click", async () => {
+          updateButton.disabled = true;
+          updateButton.textContent = "Saving…";
+          try {
+            await request(`/admin/nurseries/${nursery.id}`, {
+              method: "PATCH",
+              body: { status: select.value },
+            });
+            showMessage(`Updated ${nursery.name}'s status to ${select.value}.`, "success");
+            await loadNurseries();
+          } catch (error) {
+            if (error.status === 401 || error.status === 403) {
+              clearToken();
+              window.location.replace("admin-login.html");
+              return;
+            }
+            showMessage(error.message, "danger");
+          } finally {
+            updateButton.disabled = false;
+            updateButton.textContent = "Save";
+          }
+        });
+
+        const approveButton = document.createElement("button");
+        approveButton.type = "button";
+        approveButton.className = "btn btn-sm btn-success";
+        approveButton.textContent = "Approve";
+        approveButton.disabled = nursery.status === "active";
+        approveButton.addEventListener("click", async () => {
+          approveButton.disabled = true;
+          approveButton.textContent = "Approving…";
+          try {
+            await request(`/admin/nurseries/${nursery.id}/approve`, { method: "POST" });
+            showMessage(`${nursery.name} is active.`, "success");
+            await loadNurseries();
+          } catch (error) {
+            if (error.status === 401 || error.status === 403) {
+              clearToken();
+              window.location.replace("admin-login.html");
+              return;
+            }
+            showMessage(error.message, "danger");
+          } finally {
+            approveButton.disabled = false;
+            approveButton.textContent = "Approve";
+          }
+        });
+
+        actionGroup.appendChild(select);
+        actionGroup.appendChild(updateButton);
+        if (nursery.status !== "active") {
+          actionGroup.appendChild(approveButton);
+        }
+        actionCell.appendChild(actionGroup);
+      }
+    } catch (error) {
+      if (error.status === 401 || error.status === 403) {
+        clearToken();
+        window.location.replace("admin-login.html");
+        return;
+      }
+      tableBody.replaceChildren();
+      showMessage(error.message);
+    } finally {
+      refreshButton.disabled = false;
+    }
+  }
+
+  async function loadPlants() {
+    const tableBody = document.getElementById("adminPlants");
+    const refreshButton = document.getElementById("refreshPlantsButton");
+    if (!tableBody || !refreshButton) return;
+    refreshButton.disabled = true;
+    try {
+      const plants = await request("/admin/plants?limit=200");
+      tableBody.replaceChildren();
+      if (!plants.length) {
+        const row = tableBody.insertRow();
+        const cell = row.insertCell();
+        cell.colSpan = 5;
+        cell.className = "text-secondary text-center py-4";
+        cell.textContent = "No plants to display.";
+        return;
+      }
+      for (const plant of plants) {
+        const row = tableBody.insertRow();
+        row.insertCell().textContent = plant.name;
+        row.insertCell().textContent = plant.nursery_id;
+        const availabilityCell = row.insertCell();
+        availabilityCell.appendChild(renderAvailabilityBadge(plant.availability_status));
+        row.insertCell().textContent = plant.available_quantity ?? 0;
+
+        const actionCell = row.insertCell();
+        const actionGroup = document.createElement("div");
+        actionGroup.className = "d-flex flex-wrap gap-2 align-items-center";
+
+        const select = document.createElement("select");
+        select.className = "form-select form-select-sm w-auto";
+        select.setAttribute("aria-label", `Update availability for ${plant.name}`);
+        ["unavailable", "available_for_sale", "available_for_rent", "available_for_both"].forEach((optionValue) => {
+          const option = document.createElement("option");
+          option.value = optionValue;
+          option.textContent = optionValue.replaceAll("_", " ");
+          option.selected = optionValue === (plant.availability_status || "unavailable");
+          select.appendChild(option);
+        });
+
+        const updateButton = document.createElement("button");
+        updateButton.type = "button";
+        updateButton.className = "btn btn-sm btn-outline-success";
+        updateButton.textContent = "Save";
+        updateButton.addEventListener("click", async () => {
+          updateButton.disabled = true;
+          updateButton.textContent = "Saving…";
+          try {
+            await request(`/admin/plants/${plant.id}`, {
+              method: "PATCH",
+              body: { availability_status: select.value },
+            });
+            showMessage(`Updated ${plant.name}'s availability to ${select.value}.`, "success");
+            await loadPlants();
+          } catch (error) {
+            if (error.status === 401 || error.status === 403) {
+              clearToken();
+              window.location.replace("admin-login.html");
+              return;
+            }
+            showMessage(error.message, "danger");
+          } finally {
+            updateButton.disabled = false;
+            updateButton.textContent = "Save";
+          }
+        });
+
+        const approveButton = document.createElement("button");
+        approveButton.type = "button";
+        approveButton.className = "btn btn-sm btn-success";
+        approveButton.textContent = "Approve";
+        approveButton.disabled = ["available_for_sale", "available_for_rent", "available_for_both"].includes(plant.availability_status);
+        approveButton.addEventListener("click", async () => {
+          approveButton.disabled = true;
+          approveButton.textContent = "Approving…";
+          try {
+            await request(`/admin/plants/${plant.id}/approve`, { method: "POST" });
+            showMessage(`${plant.name} is now listed for sale/rent.`, "success");
+            await loadPlants();
+          } catch (error) {
+            if (error.status === 401 || error.status === 403) {
+              clearToken();
+              window.location.replace("admin-login.html");
+              return;
+            }
+            showMessage(error.message, "danger");
+          } finally {
+            approveButton.disabled = false;
+            approveButton.textContent = "Approve";
+          }
+        });
+
+        actionGroup.appendChild(select);
+        actionGroup.appendChild(updateButton);
+        if (!["available_for_sale", "available_for_rent", "available_for_both"].includes(plant.availability_status)) {
+          actionGroup.appendChild(approveButton);
+        }
+        actionCell.appendChild(actionGroup);
+      }
+    } catch (error) {
+      if (error.status === 401 || error.status === 403) {
+        clearToken();
+        window.location.replace("admin-login.html");
+        return;
+      }
+      tableBody.replaceChildren();
+      showMessage(error.message);
+    } finally {
+      refreshButton.disabled = false;
+    }
+  }
+
   async function initDashboard() {
     if (!token()) {
       window.location.replace("admin-login.html");
@@ -248,6 +482,8 @@
       statusFilter.addEventListener("change", loadUsers);
     }
     document.getElementById("refreshUsersButton").addEventListener("click", loadUsers);
+    document.getElementById("refreshNurseriesButton").addEventListener("click", loadNurseries);
+    document.getElementById("refreshPlantsButton").addEventListener("click", loadPlants);
     document.getElementById("adminLogoutButton").addEventListener("click", async (event) => {
       const button = event.currentTarget;
       button.disabled = true;
@@ -265,7 +501,7 @@
         button.disabled = false;
       }
     });
-    await loadUsers();
+    await Promise.all([loadUsers(), loadNurseries(), loadPlants()]);
   }
 
   document.addEventListener("DOMContentLoaded", () => {

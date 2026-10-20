@@ -8,7 +8,7 @@ from sqlalchemy.pool import StaticPool
 from app.core.constants import RoleName
 from app.core.security import create_access_token, hash_password
 from app.database import Base, get_db
-from app.models import Role, User
+from app.models import Nursery, Plant, Role, User
 from app.routers.admin import auth_router as admin_auth_router
 from app.routers.admin import router as admin_router
 from app.routers.auth import router as auth_router
@@ -147,3 +147,80 @@ def test_admin_can_filter_and_approve_users(admin_test_client):
     assert active_users.status_code == 200
     emails = {user["email"] for user in active_users.json()}
     assert {"admin@example.com", "grower@example.com"}.issubset(emails)
+
+
+def test_admin_can_manage_nurseries_and_plant_catalog(admin_test_client):
+    client, db_session = admin_test_client
+    admin_role = Role(role_name=RoleName.ADMIN.value)
+    nursery_role = Role(role_name=RoleName.NURSERY.value)
+    db_session.add_all([admin_role, nursery_role])
+    db_session.flush()
+
+    admin_user = User(
+        name="Garden Admin",
+        email="admin2@example.com",
+        password=hash_password("StrongPassword123"),
+        role_id=admin_role.id,
+        status="active",
+    )
+    db_session.add(admin_user)
+    db_session.flush()
+
+    login = client.post(
+        "/api/v1/admin/login",
+        json={"email": "admin2@example.com", "password": "StrongPassword123"},
+    )
+    assert login.status_code == 200
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    nursery_user = User(
+        name="Nursery Owner",
+        email="nursery@example.com",
+        password=hash_password("StrongPassword123"),
+        role_id=nursery_role.id,
+        status="active",
+    )
+    db_session.add(nursery_user)
+    db_session.commit()
+
+    nursery = Nursery(
+        owner_id=nursery_user.id,
+        name="Sunrise Plants",
+        description="A test nursery",
+        address="12 Garden Road",
+        city="Dhaka",
+        phone="+8801712345678",
+        email="nursery@example.com",
+        status="inactive",
+    )
+    db_session.add(nursery)
+    db_session.flush()
+
+    plant = Plant(
+        nursery_id=nursery.id,
+        name="Monstera",
+        category="Indoor",
+        size="Medium",
+        buy_price=150,
+        rent_price=40,
+        available_quantity=12,
+        availability_status="unavailable",
+    )
+    db_session.add(plant)
+    db_session.commit()
+
+    nursery_list = client.get("/api/v1/admin/nurseries?status=inactive", headers=headers)
+    assert nursery_list.status_code == 200
+    assert any(item["id"] == nursery.id for item in nursery_list.json())
+
+    approve_nursery = client.post(f"/api/v1/admin/nurseries/{nursery.id}/approve", headers=headers)
+    assert approve_nursery.status_code == 200
+    assert approve_nursery.json()["status"] == "active"
+
+    plant_list = client.get("/api/v1/admin/plants?status=unavailable", headers=headers)
+    assert plant_list.status_code == 200
+    assert any(item["id"] == plant.id for item in plant_list.json())
+
+    approve_plant = client.post(f"/api/v1/admin/plants/{plant.id}/approve", headers=headers)
+    assert approve_plant.status_code == 200
+    assert approve_plant.json()["availability_status"] in {"available_for_sale", "available_for_rent", "available_for_both"}
