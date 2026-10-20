@@ -1,4 +1,5 @@
 """Admin authentication and admin-only management endpoints."""
+from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
@@ -6,14 +7,42 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.constants import RoleName, UserStatus
+from app.core.constants import MaintenanceStatus, RequestStatus, RoleName, UserStatus
 from app.core.security import DUMMY_HASH, create_access_token, verify_password
 from app.database import get_db
 from app.dependencies.auth import require_roles
-from app.models import Nursery, Page, Plant, Role, RolePage, User
+from app.models import (
+    MaintenanceRequest,
+    MaintenanceSchedule,
+    Nursery,
+    Order,
+    Page,
+    Plant,
+    PlantRentalOrder,
+    PurchaseOrder,
+    RentalOrder,
+    RentalStatus,
+    Role,
+    RolePage,
+    User,
+)
+from app.models.order import OrderStatus as CheckoutOrderStatus
+from app.models.purchase_order import OrderStatus as PurchaseOrderStatus
 from app.schemas.auth import LoginRequest, MessageResponse, TokenResponse
+from app.schemas.admin import (
+    CheckoutOrderStatusUpdate,
+    LegacyRentalOrderAdminOut,
+    MaintenanceRequestAdminUpdate,
+    MaintenanceScheduleAdminUpdate,
+    PurchaseOrderAdminOut,
+    PurchaseOrderStatusUpdate,
+    RentalOrderStatusUpdate,
+)
 from app.schemas.nursery import NurseryOut
+from app.schemas.maintenance import MaintenanceRequestOut, MaintenanceScheduleOut
+from app.schemas.order import OrderOut
 from app.schemas.plant import PlantOut
+from app.schemas.rental import PlantRentalOrderResponse
 from app.schemas.user import AdminUserUpdate, PageOut, RoleOut, UserOut
 
 auth_router = APIRouter(prefix="/admin", tags=["Admin Authentication"])
@@ -218,6 +247,256 @@ def list_plants(
         query = query.where(Plant.nursery_id == nursery_id)
     query = query.offset(skip).limit(limit)
     return db.scalars(query).all()
+
+
+@router.get("/orders", response_model=list[OrderOut])
+def list_orders(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    status_filter: CheckoutOrderStatus | None = Query(None, alias="status"),
+    db: Session = Depends(get_db),
+):
+    query = select(Order).order_by(Order.created_at.desc(), Order.id.desc())
+    if status_filter is not None:
+        query = query.where(Order.status == status_filter.value)
+    return db.scalars(query.offset(skip).limit(limit)).all()
+
+
+@router.get("/orders/{order_id}", response_model=OrderOut)
+def get_order(order_id: int, db: Session = Depends(get_db)):
+    order = db.get(Order, order_id)
+    if order is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found")
+    return order
+
+
+@router.patch("/orders/{order_id}/status", response_model=OrderOut)
+def update_order_status(
+    order_id: int,
+    payload: CheckoutOrderStatusUpdate,
+    db: Session = Depends(get_db),
+):
+    order = db.get(Order, order_id)
+    if order is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found")
+    order.status = payload.status.value
+    db.commit()
+    db.refresh(order)
+    return order
+
+
+@router.get("/purchase-orders", response_model=list[PurchaseOrderAdminOut])
+def list_purchase_orders(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    status_filter: PurchaseOrderStatus | None = Query(None, alias="status"),
+    db: Session = Depends(get_db),
+):
+    query = select(PurchaseOrder).order_by(
+        PurchaseOrder.order_date.desc(), PurchaseOrder.order_id.desc()
+    )
+    if status_filter is not None:
+        query = query.where(PurchaseOrder.order_status == status_filter)
+    return db.scalars(query.offset(skip).limit(limit)).all()
+
+
+@router.get("/purchase-orders/{order_id}", response_model=PurchaseOrderAdminOut)
+def get_purchase_order(order_id: int, db: Session = Depends(get_db)):
+    order = db.get(PurchaseOrder, order_id)
+    if order is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Purchase order not found")
+    return order
+
+
+@router.patch(
+    "/purchase-orders/{order_id}/status", response_model=PurchaseOrderAdminOut
+)
+def update_purchase_order_status(
+    order_id: int,
+    payload: PurchaseOrderStatusUpdate,
+    db: Session = Depends(get_db),
+):
+    order = db.get(PurchaseOrder, order_id)
+    if order is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Purchase order not found")
+    order.order_status = payload.status
+    db.commit()
+    db.refresh(order)
+    return order
+
+
+@router.get("/rentals", response_model=list[PlantRentalOrderResponse])
+@router.get("/rental-orders", response_model=list[PlantRentalOrderResponse])
+def list_rental_orders(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    status_filter: RentalStatus | None = Query(None, alias="status"),
+    db: Session = Depends(get_db),
+):
+    query = select(PlantRentalOrder).order_by(
+        PlantRentalOrder.created_at.desc(), PlantRentalOrder.rental_id.desc()
+    )
+    if status_filter is not None:
+        query = query.where(PlantRentalOrder.status == status_filter)
+    return db.scalars(query.offset(skip).limit(limit)).all()
+
+
+@router.get("/rentals/{rental_id}", response_model=PlantRentalOrderResponse)
+@router.get("/rental-orders/{rental_id}", response_model=PlantRentalOrderResponse)
+def get_rental_order(rental_id: int, db: Session = Depends(get_db)):
+    rental = db.get(PlantRentalOrder, rental_id)
+    if rental is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Rental order not found")
+    return rental
+
+
+@router.patch("/rentals/{rental_id}/status", response_model=PlantRentalOrderResponse)
+@router.patch("/rental-orders/{rental_id}/status", response_model=PlantRentalOrderResponse)
+def update_rental_order_status(
+    rental_id: int,
+    payload: RentalOrderStatusUpdate,
+    db: Session = Depends(get_db),
+):
+    rental = db.get(PlantRentalOrder, rental_id)
+    if rental is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Rental order not found")
+    rental.status = payload.status
+    if payload.status.value == "Rejected":
+        rental.rejection_reason = "Rejected by administrator"
+    else:
+        rental.rejection_reason = None
+    db.commit()
+    db.refresh(rental)
+    return rental
+
+
+@router.get("/legacy-rental-orders", response_model=list[LegacyRentalOrderAdminOut])
+def list_legacy_rental_orders(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    status_filter: RentalStatus | None = Query(None, alias="status"),
+    db: Session = Depends(get_db),
+):
+    query = select(RentalOrder).order_by(RentalOrder.created_at.desc(), RentalOrder.id.desc())
+    if status_filter is not None:
+        query = query.where(RentalOrder.status == status_filter.value)
+    return db.scalars(query.offset(skip).limit(limit)).all()
+
+
+@router.get("/legacy-rental-orders/{rental_id}", response_model=LegacyRentalOrderAdminOut)
+def get_legacy_rental_order(rental_id: int, db: Session = Depends(get_db)):
+    rental = db.get(RentalOrder, rental_id)
+    if rental is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Rental order not found")
+    return rental
+
+
+@router.patch(
+    "/legacy-rental-orders/{rental_id}/status",
+    response_model=LegacyRentalOrderAdminOut,
+)
+def update_legacy_rental_order_status(
+    rental_id: int,
+    payload: RentalOrderStatusUpdate,
+    db: Session = Depends(get_db),
+):
+    rental = db.get(RentalOrder, rental_id)
+    if rental is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Rental order not found")
+    rental.status = payload.status.value
+    db.commit()
+    db.refresh(rental)
+    return rental
+
+
+@router.get("/maintenance/schedules", response_model=list[MaintenanceScheduleOut])
+def list_maintenance_schedules(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    status_filter: MaintenanceStatus | None = Query(None, alias="status"),
+    db: Session = Depends(get_db),
+):
+    query = select(MaintenanceSchedule).order_by(
+        MaintenanceSchedule.due_date, MaintenanceSchedule.id
+    )
+    if status_filter is not None:
+        query = query.where(MaintenanceSchedule.status == status_filter.value)
+    return db.scalars(query.offset(skip).limit(limit)).all()
+
+
+@router.get(
+    "/maintenance/schedules/{schedule_id}", response_model=MaintenanceScheduleOut
+)
+def get_maintenance_schedule(schedule_id: int, db: Session = Depends(get_db)):
+    schedule = db.get(MaintenanceSchedule, schedule_id)
+    if schedule is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Maintenance schedule not found")
+    return schedule
+
+
+@router.patch(
+    "/maintenance/schedules/{schedule_id}", response_model=MaintenanceScheduleOut
+)
+def update_maintenance_schedule(
+    schedule_id: int,
+    payload: MaintenanceScheduleAdminUpdate,
+    db: Session = Depends(get_db),
+):
+    schedule = db.get(MaintenanceSchedule, schedule_id)
+    if schedule is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Maintenance schedule not found")
+    schedule.status = payload.status.value
+    schedule.completed_at = (
+        datetime.utcnow() if payload.status == MaintenanceStatus.COMPLETED else None
+    )
+    db.commit()
+    db.refresh(schedule)
+    return schedule
+
+
+@router.get("/maintenance/requests", response_model=list[MaintenanceRequestOut])
+def list_maintenance_requests(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    status_filter: RequestStatus | None = Query(None, alias="status"),
+    db: Session = Depends(get_db),
+):
+    query = select(MaintenanceRequest).order_by(
+        MaintenanceRequest.updated_at.desc(), MaintenanceRequest.id.desc()
+    )
+    if status_filter is not None:
+        query = query.where(MaintenanceRequest.status == status_filter.value)
+    return db.scalars(query.offset(skip).limit(limit)).all()
+
+
+@router.get(
+    "/maintenance/requests/{request_id}", response_model=MaintenanceRequestOut
+)
+def get_maintenance_request(request_id: int, db: Session = Depends(get_db)):
+    request = db.get(MaintenanceRequest, request_id)
+    if request is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Maintenance request not found")
+    return request
+
+
+@router.patch(
+    "/maintenance/requests/{request_id}", response_model=MaintenanceRequestOut
+)
+def update_maintenance_request(
+    request_id: int,
+    payload: MaintenanceRequestAdminUpdate,
+    db: Session = Depends(get_db),
+):
+    request = db.get(MaintenanceRequest, request_id)
+    if request is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Maintenance request not found")
+    if payload.status is not None:
+        request.status = payload.status.value
+    if "response_note" in payload.model_fields_set:
+        request.response_note = payload.response_note
+    db.commit()
+    db.refresh(request)
+    return request
 
 
 @router.get("/plants/pending", response_model=list[PlantOut])
