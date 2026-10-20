@@ -364,10 +364,15 @@
   async function loadPlants() {
     const tableBody = document.getElementById("adminPlants");
     const refreshButton = document.getElementById("refreshPlantsButton");
+    const plantStatusFilter = document.getElementById("plantStatusFilter");
     if (!tableBody || !refreshButton) return;
     refreshButton.disabled = true;
     try {
-      const plants = await request("/admin/plants?limit=200");
+      const params = new URLSearchParams({ limit: "200" });
+      if (plantStatusFilter && plantStatusFilter.value !== "all") {
+        params.set("status", plantStatusFilter.value);
+      }
+      const plants = await request(`/admin/plants?${params.toString()}`);
       tableBody.replaceChildren();
       if (!plants.length) {
         const row = tableBody.insertRow();
@@ -452,11 +457,36 @@
           }
         });
 
+        const rejectButton = document.createElement("button");
+        rejectButton.type = "button";
+        rejectButton.className = "btn btn-sm btn-outline-danger";
+        rejectButton.textContent = "Reject";
+        rejectButton.addEventListener("click", async () => {
+          rejectButton.disabled = true;
+          rejectButton.textContent = "Rejecting…";
+          try {
+            await request(`/admin/plants/${plant.id}/reject`, { method: "POST" });
+            showMessage(`${plant.name} was rejected and hidden from the catalog.`, "warning");
+            await loadPlants();
+          } catch (error) {
+            if (error.status === 401 || error.status === 403) {
+              clearToken();
+              window.location.replace("admin-login.html");
+              return;
+            }
+            showMessage(error.message, "danger");
+          } finally {
+            rejectButton.disabled = false;
+            rejectButton.textContent = "Reject";
+          }
+        });
+
         actionGroup.appendChild(select);
         actionGroup.appendChild(updateButton);
         if (!["available_for_sale", "available_for_rent", "available_for_both"].includes(plant.availability_status)) {
           actionGroup.appendChild(approveButton);
         }
+        actionGroup.appendChild(rejectButton);
         actionCell.appendChild(actionGroup);
       }
     } catch (error) {
@@ -478,8 +508,12 @@
       return;
     }
     const statusFilter = document.getElementById("userStatusFilter");
+    const plantStatusFilter = document.getElementById("plantStatusFilter");
     if (statusFilter) {
       statusFilter.addEventListener("change", loadUsers);
+    }
+    if (plantStatusFilter) {
+      plantStatusFilter.addEventListener("change", loadPlants);
     }
     document.getElementById("refreshUsersButton").addEventListener("click", loadUsers);
     document.getElementById("refreshNurseriesButton").addEventListener("click", loadNurseries);

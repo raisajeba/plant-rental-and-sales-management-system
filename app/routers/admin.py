@@ -209,9 +209,24 @@ def list_plants(
 ):
     query = select(Plant).order_by(Plant.id)
     if status is not None:
-        query = query.where(Plant.availability_status == status)
+        normalized = status.strip().lower()
+        if normalized in {"pending", "pending_review", "pending-review"}:
+            query = query.where(Plant.availability_status.in_(["unavailable", "pending_review"]))
+        else:
+            query = query.where(Plant.availability_status == normalized)
     if nursery_id is not None:
         query = query.where(Plant.nursery_id == nursery_id)
+    query = query.offset(skip).limit(limit)
+    return db.scalars(query).all()
+
+
+@router.get("/plants/pending", response_model=list[PlantOut])
+def list_pending_plants(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    query = select(Plant).where(Plant.availability_status.in_(["unavailable", "pending_review"])).order_by(Plant.id)
     query = query.offset(skip).limit(limit)
     return db.scalars(query).all()
 
@@ -234,6 +249,9 @@ def update_plant(
     if plant is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant not found")
 
+    if "status" in payload and "availability_status" not in payload:
+        payload["availability_status"] = payload["status"]
+
     allowed_fields = {
         "name",
         "category",
@@ -245,6 +263,7 @@ def update_plant(
         "availability_status",
         "care_instructions",
         "image_url",
+        "status",
     }
     invalid_fields = sorted(set(payload) - allowed_fields)
     if invalid_fields:
@@ -253,21 +272,28 @@ def update_plant(
             f"Unsupported fields for plant update: {', '.join(invalid_fields)}",
         )
 
-    if "availability_status" in payload and payload["availability_status"] not in {
+    status_value = payload.get("availability_status", payload.get("status"))
+    if status_value is not None and status_value not in {
         "unavailable",
+        "pending_review",
         "available_for_sale",
         "available_for_rent",
         "available_for_both",
     }:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            "Plant availability_status must be unavailable, available_for_sale, available_for_rent, or available_for_both",
+            "Plant status must be unavailable, pending_review, available_for_sale, available_for_rent, or available_for_both",
         )
 
     for field, value in payload.items():
+        if field == "status":
+            continue
         if isinstance(value, str):
             value = value.strip()
         setattr(plant, field, value)
+
+    if "availability_status" in payload:
+        plant.availability_status = payload["availability_status"]
 
     db.commit()
     db.refresh(plant)
@@ -290,8 +316,43 @@ def approve_plant(
     elif plant.rent_price is not None:
         plant.availability_status = "available_for_rent"
     else:
-        plant.availability_status = "unavailable"
+        plant.availability_status = "pending_review"
 
+    db.commit()
+    db.refresh(plant)
+    return plant
+
+
+@router.post("/plants/{plant_id}/reject", response_model=PlantOut)
+def reject_plant(
+    plant_id: int,
+    db: Session = Depends(get_db),
+):
+    plant = db.get(Plant, plant_id)
+    if plant is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant not found")
+    plant.availability_status = "unavailable"
+    if plant.available_quantity > 0:
+        plant.available_quantity = 0
+    db.commit()
+    db.refresh(plant)
+    return plant
+
+
+@router.patch("/plants/{plant_id}/status", response_model=PlantOut)
+def update_plant_status(
+    plant_id: int,
+    payload: dict[str, Any] = Body(...),
+    db: Session = Depends(get_db),
+):
+    if "status" not in payload:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A status field is required")
+    plant = db.get(Plant, plant_id)
+    if plant is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant not found")
+    plant.availability_status = payload["status"]
+    if payload["status"] == "unavailable" and plant.available_quantity > 0:
+        plant.available_quantity = 0
     db.commit()
     db.refresh(plant)
     return plant

@@ -84,9 +84,24 @@
     </section>
 
     <section class="card border-0 shadow-sm">
-      <div class="card-header bg-white d-flex align-items-center justify-content-between py-3">
-        <h2 class="h5 mb-0">Plant catalog</h2>
-        <button class="btn btn-sm btn-outline-secondary" id="refreshPlantsButton" type="button">Refresh</button>
+      <div class="card-header bg-white py-3">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+          <div class="d-flex align-items-center gap-3">
+            <h2 class="h5 mb-0">Plant catalog</h2>
+            <div class="d-flex align-items-center gap-2">
+              <label class="small text-secondary mb-0" for="plantStatusFilter">Filter</label>
+              <select id="plantStatusFilter" class="form-select form-select-sm w-auto">
+                <option value="all">All</option>
+                <option value="pending">Pending review</option>
+                <option value="unavailable">Unavailable</option>
+                <option value="available_for_sale">Available for sale</option>
+                <option value="available_for_rent">Available for rent</option>
+                <option value="available_for_both">Available for both</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline-secondary" id="refreshPlantsButton" type="button">Refresh</button>
+        </div>
       </div>
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
