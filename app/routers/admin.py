@@ -1,15 +1,19 @@
 """Admin authentication and admin-only management endpoints."""
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from typing import Any
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.constants import RoleName
+from app.core.constants import RoleName, UserStatus
 from app.core.security import DUMMY_HASH, create_access_token, verify_password
 from app.database import get_db
 from app.dependencies.auth import require_roles
-from app.models import Page, Role, RolePage, User
+from app.models import Nursery, Page, Plant, Role, RolePage, User
 from app.schemas.auth import LoginRequest, MessageResponse, TokenResponse
+from app.schemas.nursery import NurseryOut
+from app.schemas.plant import PlantOut
 from app.schemas.user import AdminUserUpdate, PageOut, RoleOut, UserOut
 
 auth_router = APIRouter(prefix="/admin", tags=["Admin Authentication"])
@@ -67,9 +71,22 @@ router = APIRouter(
 def list_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
+    status: UserStatus | None = None,
     db: Session = Depends(get_db),
 ):
-    return db.scalars(select(User).order_by(User.id).offset(skip).limit(limit)).all()
+    query = select(User).order_by(User.id)
+    if status is not None:
+        query = query.where(User.status == status.value)
+    query = query.offset(skip).limit(limit)
+    return db.scalars(query).all()
+
+
+@router.get("/users/{user_id}", response_model=UserOut)
+def get_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    return user
 
 
 @router.patch("/users/{user_id}", response_model=UserOut)
@@ -95,6 +112,250 @@ def update_user(
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.post("/users/{user_id}/approve", response_model=UserOut)
+def approve_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_roles(RoleName.ADMIN)),
+):
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    if user.id == admin.id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "You cannot change your own account state")
+
+    user.status = UserStatus.ACTIVE.value
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@router.get("/nurseries", response_model=list[NurseryOut])
+def list_nurseries(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    status: str | None = Query(None, description="active or inactive"),
+    db: Session = Depends(get_db),
+):
+    query = select(Nursery).order_by(Nursery.id)
+    if status is not None:
+        query = query.where(Nursery.status == status)
+    query = query.offset(skip).limit(limit)
+    return db.scalars(query).all()
+
+
+@router.get("/nurseries/{nursery_id}", response_model=NurseryOut)
+def get_nursery(nursery_id: int, db: Session = Depends(get_db)):
+    nursery = db.get(Nursery, nursery_id)
+    if nursery is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Nursery not found")
+    return nursery
+
+
+@router.patch("/nurseries/{nursery_id}", response_model=NurseryOut)
+def update_nursery(
+    nursery_id: int,
+    payload: dict[str, Any] = Body(...),
+    db: Session = Depends(get_db),
+):
+    nursery = db.get(Nursery, nursery_id)
+    if nursery is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Nursery not found")
+
+    allowed_fields = {"name", "description", "address", "city", "phone", "email", "image_url", "status"}
+    invalid_fields = sorted(set(payload) - allowed_fields)
+    if invalid_fields:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"Unsupported fields for nursery update: {', '.join(invalid_fields)}",
+        )
+
+    if "status" in payload and payload["status"] not in {"active", "inactive"}:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nursery status must be active or inactive")
+
+    for field, value in payload.items():
+        if isinstance(value, str):
+            value = value.strip()
+        setattr(nursery, field, value)
+
+    db.commit()
+    db.refresh(nursery)
+    return nursery
+
+
+@router.post("/nurseries/{nursery_id}/approve", response_model=NurseryOut)
+def approve_nursery(
+    nursery_id: int,
+    db: Session = Depends(get_db),
+):
+    nursery = db.get(Nursery, nursery_id)
+    if nursery is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Nursery not found")
+    nursery.status = "active"
+    db.commit()
+    db.refresh(nursery)
+    return nursery
+
+
+@router.get("/plants", response_model=list[PlantOut])
+def list_plants(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    status: str | None = Query(None, description="Plant availability status"),
+    nursery_id: int | None = Query(None, ge=1),
+    db: Session = Depends(get_db),
+):
+    query = select(Plant).order_by(Plant.id)
+    if status is not None:
+        normalized = status.strip().lower()
+        if normalized in {"pending", "pending_review", "pending-review"}:
+            query = query.where(Plant.availability_status.in_(["unavailable", "pending_review"]))
+        else:
+            query = query.where(Plant.availability_status == normalized)
+    if nursery_id is not None:
+        query = query.where(Plant.nursery_id == nursery_id)
+    query = query.offset(skip).limit(limit)
+    return db.scalars(query).all()
+
+
+@router.get("/plants/pending", response_model=list[PlantOut])
+def list_pending_plants(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    query = select(Plant).where(Plant.availability_status.in_(["unavailable", "pending_review"])).order_by(Plant.id)
+    query = query.offset(skip).limit(limit)
+    return db.scalars(query).all()
+
+
+@router.get("/plants/{plant_id}", response_model=PlantOut)
+def get_plant(plant_id: int, db: Session = Depends(get_db)):
+    plant = db.get(Plant, plant_id)
+    if plant is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant not found")
+    return plant
+
+
+@router.patch("/plants/{plant_id}", response_model=PlantOut)
+def update_plant(
+    plant_id: int,
+    payload: dict[str, Any] = Body(...),
+    db: Session = Depends(get_db),
+):
+    plant = db.get(Plant, plant_id)
+    if plant is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant not found")
+
+    if "status" in payload and "availability_status" not in payload:
+        payload["availability_status"] = payload["status"]
+
+    allowed_fields = {
+        "name",
+        "category",
+        "size",
+        "description",
+        "buy_price",
+        "rent_price",
+        "available_quantity",
+        "availability_status",
+        "care_instructions",
+        "image_url",
+        "status",
+    }
+    invalid_fields = sorted(set(payload) - allowed_fields)
+    if invalid_fields:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"Unsupported fields for plant update: {', '.join(invalid_fields)}",
+        )
+
+    status_value = payload.get("availability_status", payload.get("status"))
+    if status_value is not None and status_value not in {
+        "unavailable",
+        "pending_review",
+        "available_for_sale",
+        "available_for_rent",
+        "available_for_both",
+    }:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Plant status must be unavailable, pending_review, available_for_sale, available_for_rent, or available_for_both",
+        )
+
+    for field, value in payload.items():
+        if field == "status":
+            continue
+        if isinstance(value, str):
+            value = value.strip()
+        setattr(plant, field, value)
+
+    if "availability_status" in payload:
+        plant.availability_status = payload["availability_status"]
+
+    db.commit()
+    db.refresh(plant)
+    return plant
+
+
+@router.post("/plants/{plant_id}/approve", response_model=PlantOut)
+def approve_plant(
+    plant_id: int,
+    db: Session = Depends(get_db),
+):
+    plant = db.get(Plant, plant_id)
+    if plant is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant not found")
+
+    if plant.buy_price is not None and plant.rent_price is not None:
+        plant.availability_status = "available_for_both"
+    elif plant.buy_price is not None:
+        plant.availability_status = "available_for_sale"
+    elif plant.rent_price is not None:
+        plant.availability_status = "available_for_rent"
+    else:
+        plant.availability_status = "pending_review"
+
+    db.commit()
+    db.refresh(plant)
+    return plant
+
+
+@router.post("/plants/{plant_id}/reject", response_model=PlantOut)
+def reject_plant(
+    plant_id: int,
+    db: Session = Depends(get_db),
+):
+    plant = db.get(Plant, plant_id)
+    if plant is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant not found")
+    plant.availability_status = "unavailable"
+    if plant.available_quantity > 0:
+        plant.available_quantity = 0
+    db.commit()
+    db.refresh(plant)
+    return plant
+
+
+@router.patch("/plants/{plant_id}/status", response_model=PlantOut)
+def update_plant_status(
+    plant_id: int,
+    payload: dict[str, Any] = Body(...),
+    db: Session = Depends(get_db),
+):
+    if "status" not in payload:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A status field is required")
+    plant = db.get(Plant, plant_id)
+    if plant is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant not found")
+    plant.availability_status = payload["status"]
+    if payload["status"] == "unavailable" and plant.available_quantity > 0:
+        plant.available_quantity = 0
+    db.commit()
+    db.refresh(plant)
+    return plant
 
 
 @router.get("/roles", response_model=list[RoleOut])

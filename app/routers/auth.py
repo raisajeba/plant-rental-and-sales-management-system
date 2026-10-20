@@ -39,6 +39,7 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
         email=payload.email,
         password=hash_password(payload.password),
         role_id=role.id,
+        status="inactive",
     )
     db.add(user)
     try:
