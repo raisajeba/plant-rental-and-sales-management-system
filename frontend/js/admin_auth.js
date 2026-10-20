@@ -128,6 +128,47 @@
     return badge;
   }
 
+  function renderDashboardSummary(summary) {
+    const number = (value) => new Intl.NumberFormat().format(value || 0);
+    document.getElementById("summaryUsersTotal").textContent = number(summary.users.total);
+    document.getElementById("summaryUsersNote").textContent =
+      `${number(summary.users.active)} active · ${number(summary.users.inactive)} inactive · ${number(summary.users.blocked)} blocked`;
+    document.getElementById("summaryNurseriesTotal").textContent = number(summary.nurseries.total);
+    document.getElementById("summaryNurseriesNote").textContent =
+      `${number(summary.nurseries.active)} active`;
+    document.getElementById("summaryPlantsTotal").textContent = number(summary.plant_listings.total);
+    document.getElementById("summaryPlantsNote").textContent =
+      `${number(summary.plant_listings.available)} available · ${number(summary.plant_listings.pending_review)} pending review`;
+    document.getElementById("summaryPurchaseTotal").textContent = number(summary.purchase_orders.total);
+    document.getElementById("summaryPurchaseNote").textContent =
+      `${number(summary.purchase_orders.pending)} pending`;
+    document.getElementById("summaryRentalTotal").textContent = number(summary.rental_orders.total);
+    document.getElementById("summaryRentalNote").textContent =
+      `${number(summary.rental_orders.pending)} pending`;
+    document.getElementById("summaryMaintenanceTotal").textContent = number(summary.maintenance_records.total);
+    document.getElementById("summaryMaintenanceNote").textContent =
+      `${number(summary.maintenance_records.open_requests)} open requests · ${number(summary.maintenance_records.pending_schedules)} pending schedules`;
+    document.getElementById("summaryUpdatedAt").textContent =
+      `Updated ${new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date())}`;
+  }
+
+  async function loadDashboardSummary() {
+    const button = document.getElementById("refreshSummaryButton");
+    if (button) button.disabled = true;
+    try {
+      renderDashboardSummary(await request("/admin/dashboard/summary"));
+    } catch (error) {
+      if (error.status === 401 || error.status === 403) {
+        clearToken();
+        window.location.replace("admin-login.html");
+        return;
+      }
+      showMessage(error.message);
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
   async function loadUsers() {
     const tableBody = document.getElementById("adminUsers");
     const refreshButton = document.getElementById("refreshUsersButton");
@@ -507,6 +548,15 @@
       window.location.replace("admin-login.html");
       return;
     }
+    try {
+      renderDashboardSummary(await request("/admin/dashboard/summary"));
+    } catch {
+      clearToken();
+      window.location.replace("admin-login.html");
+      return;
+    }
+    document.body.classList.add("is-authorized");
+
     const statusFilter = document.getElementById("userStatusFilter");
     const plantStatusFilter = document.getElementById("plantStatusFilter");
     if (statusFilter) {
@@ -518,6 +568,7 @@
     document.getElementById("refreshUsersButton").addEventListener("click", loadUsers);
     document.getElementById("refreshNurseriesButton").addEventListener("click", loadNurseries);
     document.getElementById("refreshPlantsButton").addEventListener("click", loadPlants);
+    document.getElementById("refreshSummaryButton").addEventListener("click", loadDashboardSummary);
     document.getElementById("adminLogoutButton").addEventListener("click", async (event) => {
       const button = event.currentTarget;
       button.disabled = true;
