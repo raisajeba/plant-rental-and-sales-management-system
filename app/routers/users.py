@@ -165,3 +165,44 @@ async def update_my_profile(
     db.refresh(current_user)
 
     return current_user
+
+from app.models import Order, PlantRentalOrder, MaintenanceRequest
+
+@router.get("/me/dashboard")
+def get_user_dashboard(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns the authenticated user's dashboard statistics, 
+    recent orders, active rentals, and upcoming maintenance.
+    """
+    # 1. User-er orders fetch kora
+    orders = db.scalars(
+        select(Order).where(Order.user_id == current_user.id)
+    ).all()
+    
+    # 2. Active rentals fetch kora (PlantRentalOrder use kore)
+    rentals = db.scalars(
+        select(PlantRentalOrder).where(
+            PlantRentalOrder.user_id == current_user.id,
+            PlantRentalOrder.status == "active"
+        )
+    ).all()
+    
+    # 3. Maintenance records fetch kora
+    maintenance = db.scalars(
+        select(MaintenanceRequest).where(MaintenanceRequest.user_id == current_user.id)
+    ).all()
+    
+    return {
+        "stats": {
+            "total_orders": len(orders),
+            "active_rentals": len(rentals),
+            "upcoming_maintenance": len([m for m in maintenance if m.status != "completed"]),
+            "completed_rentals": len([r for r in rentals if r.status == "completed"])
+        },
+        "recent_orders": orders[:5],
+        "active_rentals": rentals,
+        "upcoming_maintenance": maintenance[:3]
+    }

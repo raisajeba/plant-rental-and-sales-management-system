@@ -428,10 +428,6 @@ def update_rental_order_status(
     if rental is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Rental order not found")
     rental.status = payload.status
-    if payload.status.value == "Rejected":
-        rental.rejection_reason = "Rejected by administrator"
-    else:
-        rental.rejection_reason = None
     db.commit()
     db.refresh(rental)
     return rental
