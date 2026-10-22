@@ -1,13 +1,25 @@
+import enum
 from sqlalchemy import Column, Integer, Float, String, ForeignKey, DateTime, CheckConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
 
+
+class OrderStatus(str, enum.Enum):
+    PENDING = "Pending"
+    CONFIRMED = "Confirmed"
+    PROCESSING = "Processing"
+    SHIPPED = "Shipped"
+    DELIVERED = "Delivered"
+    COMPLETED = "Completed"
+    CANCELLED = "Cancelled"
+
+
 class Order(Base):
     __tablename__ = "orders"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('Pending', 'Confirmed', 'Processing', 'Completed', 'Cancelled')",
+            "status IN ('Pending', 'Confirmed', 'Processing', 'Shipped', 'Delivered', 'Completed', 'Cancelled')",
             name="ck_orders_status",
         ),
         {'extend_existing': True},
@@ -17,6 +29,8 @@ class Order(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     total_amount = Column(Float, nullable=False)
     status = Column(String(50), default="Pending")
+    payment_status = Column(String(20), nullable=False, default="PENDING", server_default="PENDING")
+    payment_transaction_id = Column(String(64), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")

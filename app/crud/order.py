@@ -1,7 +1,9 @@
 from typing import List, Optional
 from sqlalchemy.orm import Session
+from sqlalchemy import and_, func, or_
 from fastapi import HTTPException, status
 from app.models.plant import Plant
+from app.models.nursery import Nursery
 from app.models.cart_item import CartItem
 from app.models.order import Order, OrderItem, RentalOrder
 from app.schemas.order import OrderStatus
@@ -93,7 +95,17 @@ def get_orders_for_nursery_owner(db: Session, owner_id: int) -> List[Order]:
         db.query(Order)
         .join(OrderItem, Order.id == OrderItem.order_id)
         .join(Plant, OrderItem.plant_id == Plant.id)
-        .filter(Plant.owner_id == owner_id)
+        .join(Nursery, Plant.nursery_id == Nursery.id)
+        .filter(
+            Nursery.owner_id == owner_id,
+            or_(
+                func.lower(Order.payment_status) == "paid",
+                and_(
+                    func.lower(Order.payment_status) == "cod",
+                    Order.status != "Cancelled",
+                ),
+            ),
+        )
         .distinct()
         .all()
     )
@@ -105,7 +117,18 @@ def get_order_by_id_for_owner(db: Session, order_id: int, owner_id: int) -> Opti
         db.query(Order)
         .join(OrderItem, Order.id == OrderItem.order_id)
         .join(Plant, OrderItem.plant_id == Plant.id)
-        .filter(Order.id == order_id, Plant.owner_id == owner_id)
+        .join(Nursery, Plant.nursery_id == Nursery.id)
+        .filter(
+            Order.id == order_id,
+            Nursery.owner_id == owner_id,
+            or_(
+                func.lower(Order.payment_status) == "paid",
+                and_(
+                    func.lower(Order.payment_status) == "cod",
+                    Order.status != "Cancelled",
+                ),
+            ),
+        )
         .first()
     )
 

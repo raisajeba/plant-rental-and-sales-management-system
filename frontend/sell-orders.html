@@ -22,23 +22,23 @@
         <div id="message" class="alert hidden"></div>
 
         <!-- Sell Orders Table Card -->
-        <div class="card" style="padding: 1.5rem; overflow-x: auto;">
-          <table style="width: 100%; border-collapse: collapse; text-align: left;">
+        <div class="card sell-orders-card">
+          <table class="sell-orders-table">
             <thead>
-              <tr style="border-bottom: 2px solid #eee; color: #666; font-size: 0.9rem;">
-                <th style="padding: 0.75rem;">Order ID</th>
-                <th style="padding: 0.75rem;">Customer</th>
-                <th style="padding: 0.75rem;">Plant</th>
-                <th style="padding: 0.75rem;">Quantity</th>
-                <th style="padding: 0.75rem;">Total Price</th>
-                <th style="padding: 0.75rem;">Order Date</th>
-                <th style="padding: 0.75rem;">Order Status</th>
-                <th style="padding: 0.75rem;">Action</th>
+              <tr>
+                <th scope="col">Order ID</th>
+                <th scope="col">Customer</th>
+                <th scope="col">Plant</th>
+                <th scope="col">Quantity</th>
+                <th scope="col">Total Price</th>
+                <th scope="col">Order Date</th>
+                <th scope="col">Status</th>
+                <th scope="col">Action</th>
               </tr>
             </thead>
             <tbody id="sellOrdersTableBody">
               <tr>
-                <td colspan="8" style="text-align: center; padding: 2rem; color: #666;">Loading sell orders...</td>
+                <td colspan="8" class="order-history-state">Loading sell orders...</td>
               </tr>
             </tbody>
           </table>

@@ -12,7 +12,7 @@ from app.core.constants import AvailabilityStatus
 from app.database import Base, get_db
 from app.dependencies.auth import get_current_user
 from app.models import Nursery, Order, OrderItem, Plant, Role, User
-from app.routers.order import router
+from app.routers.order import nursery_sell_orders_router, router
 
 
 @pytest.fixture
@@ -26,6 +26,7 @@ def owner_order_client():
     Base.metadata.create_all(bind=engine)
     app = FastAPI()
     app.include_router(router, prefix="/api/v1")
+    app.include_router(nursery_sell_orders_router, prefix="/api/v1")
 
     user_role = Role(role_name="User")
     nursery_role = Role(role_name="Nursery")
@@ -109,6 +110,7 @@ def owner_order_client():
             user_id=customer.id,
             total_amount=20,
             status="Pending",
+            payment_status="PAID",
             created_at=datetime(2026, 1, 1),
             items=[
                 OrderItem(
@@ -123,6 +125,7 @@ def owner_order_client():
             user_id=customer.id,
             total_amount=30,
             status="Pending",
+            payment_status="PAID",
             created_at=datetime(2026, 1, 2),
             items=[
                 OrderItem(
@@ -143,6 +146,7 @@ def owner_order_client():
             user_id=other_customer.id,
             total_amount=10,
             status="Pending",
+            payment_status="PAID",
             items=[
                 OrderItem(
                     plant_id=first_plant.id,
@@ -152,7 +156,21 @@ def owner_order_client():
                 )
             ],
         )
-        session.add_all([own_order, mixed_order, other_customer_order])
+        unpaid_order = Order(
+            user_id=customer.id,
+            total_amount=10,
+            status="Pending",
+            payment_status="PENDING",
+            items=[
+                OrderItem(
+                    plant_id=first_plant.id,
+                    quantity=1,
+                    unit_price=10,
+                    total_price=10,
+                )
+            ],
+        )
+        session.add_all([own_order, mixed_order, other_customer_order, unpaid_order])
         session.commit()
         ids = {
             "customer_id": customer.id,
@@ -161,6 +179,7 @@ def owner_order_client():
             "own_order_id": own_order.id,
             "mixed_order_id": mixed_order.id,
             "other_customer_order_id": other_customer_order.id,
+            "unpaid_order_id": unpaid_order.id,
         }
 
     with TestClient(app) as client:
@@ -175,10 +194,16 @@ def test_owner_order_list_and_details_only_include_their_plants(owner_order_clie
     client, _, ids, _ = owner_order_client
 
     response = client.get("/api/v1/orders/owner")
+    alias_response = client.get("/api/v1/nursery/sell-orders")
 
     assert response.status_code == 200
+    assert alias_response.status_code == 200
+    assert {item["id"] for item in alias_response.json()} == {
+        item["id"] for item in response.json()
+    }
     orders = {order["id"]: order for order in response.json()}
     assert set(orders) == {ids["own_order_id"], ids["mixed_order_id"], ids["other_customer_order_id"]}
+    assert ids["unpaid_order_id"] not in orders
     assert orders[ids["own_order_id"]]["customer_name"] == "Customer One"
     assert orders[ids["own_order_id"]]["items"][0]["plant_name"] == "Monstera"
     assert orders[ids["own_order_id"]]["items"][0]["quantity"] == 2
@@ -213,9 +238,15 @@ def test_owner_status_update_validates_and_is_visible_to_customer(owner_order_cl
     assert updated.json()["status"] == "Confirmed"
     invalid = client.patch(
         f"/api/v1/orders/owner/{order_id}/status",
-        json={"status": "Shipped"},
+        json={"status": "Not a valid status"},
     )
     assert invalid.status_code == 422
+    shipped = client.patch(
+        f"/api/v1/orders/owner/{order_id}/status",
+        json={"status": "Shipped"},
+    )
+    assert shipped.status_code == 200
+    assert shipped.json()["status"] == "Shipped"
     current_user["user"] = SimpleNamespace(
         id=ids["customer_id"],
         role=SimpleNamespace(role_name="User"),
@@ -223,9 +254,9 @@ def test_owner_status_update_validates_and_is_visible_to_customer(owner_order_cl
     customer_history = client.get("/api/v1/orders/my-orders")
     assert next(
         order for order in customer_history.json() if order["id"] == order_id
-    )["status"] == "Confirmed"
+    )["status"] == "Shipped"
     with testing_session() as session:
-        assert session.get(Order, order_id).status == "Confirmed"
+        assert session.get(Order, order_id).status == "Shipped"
 
 
 def test_owner_cannot_access_or_update_another_owners_order(owner_order_client):
