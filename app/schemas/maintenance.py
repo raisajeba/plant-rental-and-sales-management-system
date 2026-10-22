@@ -61,6 +61,8 @@ class MaintenanceScheduleOut(BaseModel):
 # ---------- Requests ----------
 class MaintenanceRequestCreate(BaseModel):
     plant_name: str | None = Field(default=None, max_length=100)
+    nursery_id: int | None = Field(default=None, gt=0)
+    nursery_name: str | None = Field(default=None, min_length=2, max_length=150)
     request_type: MaintenanceTask
     description: str = Field(min_length=10, max_length=1000)
     preferred_date: date | None = None
@@ -68,6 +70,12 @@ class MaintenanceRequestCreate(BaseModel):
     @field_validator("plant_name")
     @classmethod
     def clean_plant_name(cls, v: str | None) -> str | None:
+        v = v.strip() if v else None
+        return v or None
+
+    @field_validator("nursery_name")
+    @classmethod
+    def clean_nursery_name(cls, v: str | None) -> str | None:
         v = v.strip() if v else None
         return v or None
 
@@ -82,6 +90,7 @@ class MaintenanceRequestCreate(BaseModel):
 class MaintenanceRequestOut(BaseModel):
     id: int
     user_id: int
+    nursery_id: int | None = None
     plant_name: str | None = None
     request_type: str
     description: str
@@ -150,8 +159,8 @@ class NurseryMaintenanceUpdate(BaseModel):
 
 class NurseryMaintenanceOut(BaseModel):
     id: int
-    plant_id: int
-    plant_name: str
+    plant_id: int | None = None
+    plant_name: str | None = None
     customer_id: int
     customer_name: str
     request_type: str

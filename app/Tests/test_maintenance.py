@@ -138,6 +138,7 @@ def maintenance_client():
             "other_owner": other_owner.id,
             "customer": customer.id,
             "plant": plant.id,
+            "nursery": nursery.id,
         }
 
     with TestClient(app) as client:
@@ -175,6 +176,57 @@ def test_owner_records_are_limited_to_ordered_plants_and_customer(maintenance_cl
         f"/api/v1/maintenance/owner/records/{records.json()[0]['id']}",
         json={"status": "completed"},
     ).status_code == 404
+
+
+def test_user_request_is_associated_with_selected_nursery_and_visible_to_owner(
+    maintenance_client,
+):
+    client, current_user, ids, testing_session = maintenance_client
+    current_user["user"] = SimpleNamespace(
+        id=ids["customer"], role=SimpleNamespace(role_name="User")
+    )
+    created = client.post(
+        "/api/v1/maintenance/requests",
+        json={
+            "nursery_id": ids["nursery"],
+            "request_type": "pest_control",
+            "description": "Please inspect this plant for pests.",
+        },
+    )
+    assert created.status_code == 201
+    request_id = created.json()["id"]
+    assert created.json()["nursery_id"] == ids["nursery"]
+
+    created_by_name = client.post(
+        "/api/v1/maintenance/requests",
+        json={
+            "nursery_name": "Owner Nursery",
+            "request_type": "watering",
+            "description": "Please check the soil moisture.",
+        },
+    )
+    assert created_by_name.status_code == 201
+    assert created_by_name.json()["nursery_id"] == ids["nursery"]
+
+    with testing_session() as session:
+        request = session.get(MaintenanceRequest, request_id)
+        assert request.nursery_id == ids["nursery"]
+        assert request.plant_name is None
+        name_request = session.get(MaintenanceRequest, created_by_name.json()["id"])
+        assert name_request.nursery_id == ids["nursery"]
+
+    current_user["user"] = SimpleNamespace(
+        id=ids["owner"], role=SimpleNamespace(role_name="Nursery")
+    )
+    records = client.get("/api/v1/maintenance/owner/records")
+    assert records.status_code == 200
+    assert {
+        request_id,
+        created_by_name.json()["id"],
+    }.issubset({record["id"] for record in records.json()})
+    matching = next(record for record in records.json() if record["id"] == request_id)
+    assert matching["plant_id"] is None
+    assert matching["status"] == "pending"
 
 
 def test_owner_can_schedule_and_update_records_visible_in_customer_history(maintenance_client):

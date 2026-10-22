@@ -31,7 +31,7 @@
         </div>
 
         <!-- Care schedule table -->
-        <section class="card">
+        <section class="card" style="width: 100%; margin-bottom: 2rem;">
           <div class="card-head">
             <h3>My Care Schedule</h3>
             <select id="statusFilter" class="inline-select" aria-label="Filter tasks">
@@ -41,7 +41,7 @@
             </select>
           </div>
           <div class="table-wrap">
-            <table class="data-table">
+            <table class="data-table" style="width: 100%;">
               <thead>
                 <tr>
                   <th>Plant</th>
@@ -61,7 +61,7 @@
         </section>
 
         <!-- Forms -->
-        <div class="grid-2 section-gap">
+        <div class="maintenance-forms-grid section-gap">
           <section class="card">
             <h3>Add a Care Task</h3>
             <form id="taskForm" novalidate>
@@ -103,14 +103,21 @@
             </form>
           </section>
 
-          <section class="card">
+         <section class="card">
             <h3>Request Maintenance Help</h3>
             <form id="requestForm" novalidate>
-              <div class="form-group">
-                <label for="requestPlant">Plant name (optional)</label>
-                <input type="text" id="requestPlant" maxlength="100" placeholder="Leave empty if it is a general question" />
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="requestPlant">Plant name (optional)</label>
+                  <input type="text" id="requestPlant" maxlength="100" placeholder="e.g. Areca Palm" />
+                </div>
+                <div class="form-group">
+                  <label for="requestNursery">Select Nursery (optional)</label>
+                  <select id="requestNursery">
+                    <option value="">Loading nurseries...</option>
+                  </select>
+                </div>
               </div>
-
               <div class="form-row">
                 <div class="form-group">
                   <label for="requestType">What do you need help with?</label>
@@ -128,22 +135,20 @@
                   <input type="date" id="preferredDate" />
                 </div>
               </div>
-
               <div class="form-group">
                 <label for="requestDescription">Describe the problem</label>
-                <textarea id="requestDescription" class="compact" maxlength="1000" placeholder="e.g. The leaves are turning yellow at the edges (at least 10 characters)" required></textarea>
+                <textarea id="requestDescription" class="compact" maxlength="1000"
+                  placeholder="e.g. The leaves are turning yellow at the edges (at least 10 characters)" required></textarea>
               </div>
-
               <button type="submit" class="btn btn-primary btn-block" id="requestSubmitBtn">Submit Request</button>
             </form>
           </section>
         </div>
-
-        <!-- My requests table -->
-        <section class="card section-gap">
+        <!-- My requests table (Full width fixed) -->
+        <section class="card section-gap" style="width: 100%; margin-top: 2rem;">
           <div class="card-head"><h3>My Requests</h3></div>
           <div class="table-wrap">
-            <table class="data-table">
+            <table class="data-table" style="width: 100%;">
               <thead>
                 <tr>
                   <th>Request</th>
