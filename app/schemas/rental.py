@@ -43,8 +43,10 @@ class PlantRentalOrderResponse(BaseModel):
     rental_price_per_day: float
     total_amount: float
     status: RentalStatusEnum
+    payment_status: str = "PENDING"
     created_at: datetime
     updated_at: datetime
+    rejection_reason: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -77,6 +79,7 @@ class RentalOwnerOrderOut(BaseModel):
     rental_price_per_day: float
     total_amount: float
     status: RentalStatusEnum
+    payment_status: str = "PENDING"
     created_at: datetime
     rejection_reason: str | None = None
 
@@ -93,6 +96,7 @@ class RentalHistoryItemOut(BaseModel):
     rental_price_per_day: float
     total_amount: float
     status: RentalStatusEnum
+    payment_status: str = "PENDING"
     created_at: datetime
     rejection_reason: str | None = None
 
