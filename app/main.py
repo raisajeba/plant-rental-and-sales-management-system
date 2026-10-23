@@ -21,6 +21,7 @@ from app.routers import (
     maintenance,
     nurseries,
     order,  # Added for purchase orders
+    payment,
     pages,
     plants,
     rentals,  # Rentals Router Here
@@ -109,6 +110,8 @@ for r in (
     plants.router,
     cart.router,
     order.router,
+    order.nursery_sell_orders_router,
+    payment.router,
     rentals.router,  # <--- rentals.router অন্তর্ভুক্ত করা হলো
     pages.router,
     maintenance.router,

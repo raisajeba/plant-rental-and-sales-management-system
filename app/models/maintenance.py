@@ -1,7 +1,7 @@
 from datetime import date, datetime
 
 from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 from app.models.mixins import TimestampMixin
@@ -61,6 +61,11 @@ class MaintenanceRequest(TimestampMixin, Base):
         nullable=False,
         index=True,
     )
+    nursery_id: Mapped[int | None] = mapped_column(
+        ForeignKey("nurseries.id", ondelete="SET NULL", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     plant_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     request_type: Mapped[str] = mapped_column(String(30), nullable=False)
     description: Mapped[str] = mapped_column(String(1000), nullable=False)
@@ -69,3 +74,4 @@ class MaintenanceRequest(TimestampMixin, Base):
         String(20), nullable=False, default="open", server_default="open"
     )
     response_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    nursery = relationship("Nursery")

@@ -64,6 +64,14 @@
       { url: "/buy", label: "Buy", file: "buy.html", icon: "buy" },
       { url: "/rent", label: "Rent", file: "rent.html", icon: "rent" },
       {
+        url: "/cart",
+        label: "My Cart",
+        file: "buy.html",
+        query: "view=cart",
+        icon: "cart",
+        clientOnly: true
+      },
+      {
         url: "/customer-history",
         label: "Purchase History",
         file: "customer-history.html",
@@ -139,6 +147,10 @@
     rent:
       '<rect x="4" y="5" width="16" height="15" rx="2"/>' +
       '<path d="M4 10h16M9 3v4M15 3v4"/>',
+
+    cart:
+      '<path d="M3 3h2l2.2 11.2a2 2 0 0 0 2 1.6h8.9a2 2 0 0 0 1.9-1.4L22 8H6"/>' +
+      '<circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/>',
 
     maintenance:
       '<path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/>',
@@ -352,7 +364,7 @@
     nav.replaceChildren();
 
     const items = MENU_ROUTES[role].filter((route) =>
-      allowedUrls.has(route.url)
+      allowedUrls.has(route.url) || (route.clientOnly && role === "User")
     );
 
     if (items.length === 0) {
@@ -371,12 +383,14 @@
     }
 
     items.forEach((route) => {
-      const isActive =
-        route.file === currentFile;
+      const cartView = new URLSearchParams(window.location.search).get("view") === "cart";
+      const isActive = route.url === "/cart"
+        ? route.file === currentFile && cartView
+        : route.file === currentFile && !(route.url === "/buy" && cartView);
 
       const node = document.createElement("a");
       node.className = "nav-link" + (isActive ? " active" : "");
-      node.href = route.file;
+      node.href = route.query ? `${route.file}?${route.query}` : route.file;
 
       if (isActive) {
         node.setAttribute(
@@ -388,15 +402,50 @@
       node.innerHTML =
         svg(route.icon);
 
-      node.append(
-        document.createTextNode(
-          route.label
-        )
-      );
+      node.append(document.createTextNode(route.label));
+
+      if (route.url === "/cart") {
+        const badge = document.createElement("span");
+        badge.className = "cart-nav-badge";
+        badge.dataset.cartCount = "";
+        badge.hidden = true;
+        badge.setAttribute("aria-label", "0 items in cart");
+        node.append(badge);
+      }
 
       nav.append(node);
     });
   }
+
+  function setCartBadgeCount(count) {
+    const badge = document.querySelector("[data-cart-count]");
+    if (!badge || !Number.isFinite(count)) return;
+    badge.textContent = count > 99 ? "99+" : String(count);
+    badge.hidden = count === 0;
+    badge.setAttribute(
+      "aria-label",
+      `${count} item${count === 1 ? "" : "s"} in cart`
+    );
+  }
+
+  async function refreshCartBadge() {
+    try {
+      const items = await apiRequest("/cart/items", { auth: true });
+      setCartBadgeCount(
+        items.reduce((total, item) => total + Number(item.quantity || 0), 0)
+      );
+    } catch (error) {
+      console.error("Could not refresh the cart count:", error);
+    }
+  }
+
+  window.addEventListener("greennest:cart-updated", (event) => {
+    if (typeof event.detail?.count === "number") {
+      setCartBadgeCount(event.detail.count);
+    } else {
+      void refreshCartBadge();
+    }
+  });
 
   /* =========================================================
      6. Load backend data
@@ -439,6 +488,9 @@
         role,
         new Set(menu.map((page) => page.page_url))
       );
+      if (role === "User") {
+        void refreshCartBadge();
+      }
       body.style.visibility = "visible";
 
       return { user };

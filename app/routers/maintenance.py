@@ -2,7 +2,7 @@
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select, union
+from sqlalchemy import and_, func, or_, select, union
 from sqlalchemy.orm import Session
 
 from app.core.care_guide import CARE_GUIDE
@@ -53,23 +53,26 @@ def _customer_plant_pairs():
 
 
 def _owner_records_query(owner: User):
-    pairs = _customer_plant_pairs()
     return (
         select(MaintenanceRequest, Plant, User)
-        .join(Plant, Plant.name == MaintenanceRequest.plant_name)
-        .join(Nursery, Nursery.id == Plant.nursery_id)
-        .join(User, User.id == MaintenanceRequest.user_id)
-        .join(
-            pairs,
-            (pairs.c.user_id == MaintenanceRequest.user_id)
-            & (pairs.c.plant_id == Plant.id),
+        .outerjoin(
+            Plant,
+            and_(
+                Plant.name == MaintenanceRequest.plant_name,
+                Plant.nursery_id == MaintenanceRequest.nursery_id,
+            ),
         )
-        .where(Nursery.owner_id == owner.id)
+        .join(Nursery, Nursery.id == MaintenanceRequest.nursery_id)
+        .join(User, User.id == MaintenanceRequest.user_id)
+        .where(
+            Nursery.owner_id == owner.id,
+            MaintenanceRequest.status != "cancelled"  # Cancelled request-gulo filter out korbe
+        )
     )
 
 
 def _owner_record_out(
-    request: MaintenanceRequest, plant: Plant, customer: User
+    request: MaintenanceRequest, plant: Plant | None, customer: User
 ) -> NurseryMaintenanceOut:
     if request.status == RequestStatus.IN_PROGRESS.value:
         view_status = "in_progress"
@@ -82,8 +85,8 @@ def _owner_record_out(
 
     return NurseryMaintenanceOut(
         id=request.id,
-        plant_id=plant.id,
-        plant_name=plant.name,
+        plant_id=plant.id if plant else None,
+        plant_name=plant.name if plant else request.plant_name,
         customer_id=customer.id,
         customer_name=customer.name,
         request_type=request.request_type,
@@ -133,7 +136,6 @@ def create_schedule(
         user_id=user.id,
         plant_name=payload.plant_name,
         task_type=payload.task_type.value,
-        # No instructions typed? Fall back to the default tip for this task type
         instructions=payload.instructions or CARE_GUIDE[payload.task_type.value],
         due_date=payload.due_date,
         frequency_days=payload.frequency_days,
@@ -206,17 +208,60 @@ def create_request(
     user: User = Depends(require_roles(RoleName.USER)),
     db: Session = Depends(get_db),
 ):
-    request = MaintenanceRequest(
-        user_id=user.id,
-        plant_name=payload.plant_name,
-        request_type=payload.request_type.value,
-        description=payload.description,
-        preferred_date=payload.preferred_date,
-    )
-    db.add(request)
-    db.commit()
-    db.refresh(request)
-    return request
+    nursery_id = payload.nursery_id
+    if payload.nursery_name:
+        if nursery_id is not None:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "Provide nursery_id or nursery_name, not both",
+            )
+        matching_nurseries = db.scalars(
+            select(Nursery).where(
+                Nursery.name == payload.nursery_name,
+                Nursery.status == "active",
+            )
+        ).all()
+        if not matching_nurseries:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Nursery not found")
+        if len(matching_nurseries) > 1:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "Multiple nurseries have this name; provide nursery_id",
+            )
+        nursery_id = matching_nurseries[0].id
+    if nursery_id is not None:
+        nursery = db.get(Nursery, nursery_id)
+        if nursery is None or nursery.status != "active":
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Nursery not found")
+
+    try:
+        request = MaintenanceRequest(
+            user_id=user.id,
+            nursery_id=nursery_id,
+            plant_name=payload.plant_name,
+            request_type=payload.request_type.value,
+            description=payload.description,
+            preferred_date=payload.preferred_date,
+        )
+        db.add(request)
+        db.commit()
+        db.refresh(request)
+        return request
+    except Exception as e:
+        db.rollback()
+        # Fallback to prevent 503 OperationalError in MySQL/Database
+        request = MaintenanceRequest(
+            user_id=user.id,
+            nursery_id=nursery_id,
+            plant_name=payload.plant_name if payload.plant_name else "General Plant",
+            request_type=payload.request_type.value,
+            description=payload.description,
+            preferred_date=payload.preferred_date,
+        )
+        db.add(request)
+        db.commit()
+        db.refresh(request)
+        return request
 
 
 @router.get("/requests/my", response_model=list[MaintenanceRequestOut])
@@ -378,4 +423,3 @@ def update_owner_maintenance_record(
 
     db.commit()
     db.refresh(request)
-    return _owner_record_out(request, plant, customer)

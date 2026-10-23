@@ -5,12 +5,111 @@ function initRentPage() {
   const grid = document.getElementById("rentPlantsGrid");
   const searchInput = document.getElementById("searchInput");
   const today = new Date().toISOString().slice(0, 10);
+  const quickViewDialog = document.getElementById("plantQuickViewDialog");
+  const closeQuickViewButton = document.getElementById("closeQuickViewButton");
+  const quickViewImage = document.getElementById("quickViewImage");
+  const quickViewTitle = document.getElementById("quickViewTitle");
+  const quickViewCategory = document.getElementById("quickViewCategory");
+  const quickViewNursery = document.getElementById("quickViewNursery");
+  const quickViewPrice = document.getElementById("quickViewPrice");
+  const quickViewCare = document.getElementById("quickViewCare");
+  const quickViewStock = document.getElementById("quickViewStock");
+  const quickViewForm = document.getElementById("quickViewRentForm");
+  const quickViewQuantity = document.getElementById("quickViewQuantity");
+  const quickViewStartDate = document.getElementById("quickViewStartDate");
+  const quickViewEndDate = document.getElementById("quickViewEndDate");
+  const quickViewAction = document.getElementById("quickViewAction");
   let availablePlants = [];
+  let quickViewPlant = null;
+
+  function getPlantImageUrl(imageUrl, highResolution = false) {
+    if (!imageUrl) return "";
+    const url = new URL(imageUrl, API_ORIGIN);
+    if (highResolution && url.hostname === "images.unsplash.com") {
+      url.searchParams.set("w", "1200");
+      url.searchParams.set("q", "90");
+    }
+    return url.href;
+  }
+
+  function openQuickView(plant) {
+    quickViewPlant = plant;
+    quickViewTitle.textContent = plant.name;
+    quickViewCategory.textContent = plant.category || "General";
+    quickViewNursery.textContent = `From ${plant.nursery_name || "GreenNest nursery"}`;
+    quickViewPrice.textContent = `৳${Number(plant.rent_price).toFixed(2)} / day`;
+    quickViewCare.textContent = plant.care_instructions || "Care details are not available yet.";
+    quickViewStock.textContent = plant.available_quantity > 0
+      ? `${plant.available_quantity} available`
+      : "Currently out of stock";
+    quickViewImage.hidden = !plant.image_url;
+    quickViewImage.alt = `${plant.name} plant`;
+    if (plant.image_url) {
+      quickViewImage.src = getPlantImageUrl(plant.image_url, true);
+    } else {
+      quickViewImage.removeAttribute("src");
+    }
+    quickViewQuantity.max = String(plant.available_quantity);
+    quickViewQuantity.value = "1";
+    quickViewStartDate.min = today;
+    quickViewStartDate.value = today;
+    quickViewEndDate.min = today;
+    quickViewEndDate.value = today;
+    quickViewDialog.showModal();
+  }
+
+  async function submitRentalRequest(plant, quantityInput, startDateInput, endDateInput, button) {
+    const requestedQuantity = Number(quantityInput.value);
+    if (
+      !Number.isInteger(requestedQuantity) ||
+      requestedQuantity < 1 ||
+      requestedQuantity > plant.available_quantity
+    ) {
+      showMessage(`Choose a quantity between 1 and ${plant.available_quantity}.`);
+      return;
+    }
+    if (
+      !startDateInput.value ||
+      !endDateInput.value ||
+      startDateInput.value < today ||
+      endDateInput.value < startDateInput.value
+    ) {
+      showMessage("Choose a valid rental start and end date.");
+      return;
+    }
+
+    hideMessage();
+
+    button.disabled = true;
+    try {
+      const rental = await apiRequest("/rentals/requests", {
+        method: "POST",
+        auth: true,
+        body: {
+          plant_id: plant.id,
+          quantity: requestedQuantity,
+          rental_start_date: startDateInput.value,
+          rental_end_date: endDateInput.value,
+        },
+      });
+      showMessage(
+        `Rental request submitted. Waiting for Nursery Owner Acceptance. Request #${rental.order_identifier}.`,
+        "success"
+      );
+      if (quickViewDialog.open) quickViewDialog.close();
+    } catch (error) {
+      showMessage(error.message);
+    } finally {
+      button.disabled = false;
+    }
+  }
 
   function renderPlants(searchTerm = "") {
     const normalizedSearch = searchTerm.trim().toLowerCase();
     const matches = availablePlants.filter((plant) =>
-      `${plant.name} ${plant.category || ""}`.toLowerCase().includes(normalizedSearch)
+      `${plant.name} ${plant.category || ""} ${plant.nursery_name || ""}`
+        .toLowerCase()
+        .includes(normalizedSearch)
     );
 
     grid.replaceChildren();
@@ -33,13 +132,16 @@ function initRentPage() {
       image.alt = plant.name;
       image.hidden = !plant.image_url;
       if (plant.image_url) {
-        image.src = `${API_ORIGIN}${plant.image_url}`;
+        image.src = getPlantImageUrl(plant.image_url);
       }
 
       const plantName = document.createElement("h3");
       plantName.textContent = plant.name;
       const category = document.createElement("p");
       category.textContent = `Category: ${plant.category || "General"}`;
+      const nursery = document.createElement("p");
+      nursery.className = "landing-plant-nursery";
+      nursery.textContent = `From ${plant.nursery_name || "GreenNest nursery"}`;
       const price = document.createElement("p");
       price.className = "rental-plant-price";
       price.textContent = `৳${Number(plant.rent_price).toFixed(2)} / day`;
@@ -81,45 +183,16 @@ function initRentPage() {
       rentButton.textContent = "Submit rental request";
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
-        const requestedQuantity = Number(quantity.value);
-        if (
-          !Number.isInteger(requestedQuantity) ||
-          requestedQuantity < 1 ||
-          requestedQuantity > plant.available_quantity
-        ) {
-          showMessage(`Choose a quantity between 1 and ${plant.available_quantity}.`);
-          return;
-        }
-        if (!startDate.value || !endDate.value || endDate.value < startDate.value) {
-          showMessage("Choose a valid rental start and end date.");
-          return;
-        }
-
-        rentButton.disabled = true;
-        try {
-          const rental = await apiRequest("/rentals/requests", {
-            method: "POST",
-            auth: true,
-            body: {
-              plant_id: plant.id,
-              quantity: requestedQuantity,
-              rental_start_date: startDate.value,
-              rental_end_date: endDate.value,
-            }
-          });
-          showMessage(
-            `Rental request #${rental.rental_id} submitted for ${rental.rental_duration_days} day(s). Total: ৳${Number(rental.total_amount).toFixed(2)}.`,
-            "success"
-          );
-        } catch (error) {
-          showMessage(error.message);
-        } finally {
-          rentButton.disabled = false;
-        }
+        await submitRentalRequest(plant, quantity, startDate, endDate, rentButton);
       });
 
       form.append(quantityLabel, startDateLabel, endDateLabel, rentButton);
-      card.append(image, plantName, category, price, form);
+      const viewDetailsButton = document.createElement("button");
+      viewDetailsButton.type = "button";
+      viewDetailsButton.className = "btn btn-reset plant-card-details-action";
+      viewDetailsButton.textContent = "View Details";
+      viewDetailsButton.addEventListener("click", () => openQuickView(plant));
+      card.append(image, plantName, category, nursery, price, viewDetailsButton, form);
       grid.appendChild(card);
     });
   }
@@ -127,6 +200,28 @@ function initRentPage() {
   async function loadRentPlants() {
     try {
       availablePlants = await apiRequest("/rentals/plants", { auth: true });
+      const nurseryNames = new Map();
+      const plantIds = new Set(availablePlants.map((plant) => plant.id));
+      let skip = 0;
+      while (nurseryNames.size < plantIds.size) {
+        const page = await apiRequest(`/plants?skip=${skip}&limit=100`, {
+          auth: true,
+        });
+        for (const plant of page) {
+          if (plantIds.has(plant.id) && plant.nursery_name) {
+            nurseryNames.set(plant.id, plant.nursery_name);
+          }
+        }
+        if (page.length < 100) break;
+        skip += page.length;
+      }
+      if (nurseryNames.size !== plantIds.size) {
+        throw new Error("Could not load nursery names for all rental listings.");
+      }
+      availablePlants = availablePlants.map((plant) => ({
+        ...plant,
+        nursery_name: nurseryNames.get(plant.id),
+      }));
       renderPlants(searchInput.value);
     } catch (err) {
       showMessage(err.message, "error");
@@ -138,6 +233,22 @@ function initRentPage() {
   }
 
   searchInput.addEventListener("input", () => renderPlants(searchInput.value));
+  closeQuickViewButton.addEventListener("click", () => quickViewDialog.close());
+  quickViewDialog.addEventListener("click", (event) => {
+    if (event.target === quickViewDialog) quickViewDialog.close();
+  });
+  quickViewForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (quickViewPlant) {
+      void submitRentalRequest(
+        quickViewPlant,
+        quickViewQuantity,
+        quickViewStartDate,
+        quickViewEndDate,
+        quickViewAction
+      );
+    }
+  });
   loadRentPlants();
 }
 

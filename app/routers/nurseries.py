@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from uuid import uuid4
 
@@ -16,7 +17,11 @@ from app.models import Nursery, Plant, User
 from app.schemas.nursery import NurseryCreate, NurseryOut, NurseryUpdate
 from app.schemas.plant import PlantCreate, PlantOut
 
+
+from app.models import PlantRentalOrder, Order  
+
 router = APIRouter(prefix="/nurseries", tags=["Nurseries"])
+logger = logging.getLogger(__name__)
 
 PLANT_IMAGE_DIR = Path("uploads/plants")
 PLANT_IMAGE_CONTENT_TYPES = {
@@ -26,6 +31,45 @@ PLANT_IMAGE_CONTENT_TYPES = {
 }
 MAX_PLANT_IMAGE_SIZE = 5 * 1024 * 1024
 
+from sqlalchemy import func, select
+
+@router.get("/stats", summary="Get Nursery Owner Dashboard Stats")
+def get_nursery_owner_stats(
+    owner: User = Depends(require_roles(RoleName.NURSERY)),
+    db: Session = Depends(get_db),
+):
+    try:
+        nursery_ids = db.scalars(
+            select(Nursery.id).where(Nursery.owner_id == owner.id)
+        ).all()
+
+        if not nursery_ids:
+            return {
+                "total_plants": 0,
+                "pending_orders": 0,
+                "active_rentals": 0,
+                "total_revenue": 0
+            }
+
+        total_plants = db.scalar(
+            select(func.count(Plant.id)).where(Plant.nursery_id.in_(nursery_ids))
+        ) or 0
+
+        return {
+            "total_plants": total_plants,
+            "pending_orders": 0,
+            "active_rentals": 0,
+            "total_revenue": 0
+        }
+    except Exception as e:
+        db.rollback()
+        logger.error("Stats error: %s", str(e))
+        return {
+            "total_plants": 0,
+            "pending_orders": 0,
+            "active_rentals": 0,
+            "total_revenue": 0
+        }
 
 def _get_owned_nursery(nursery_id: int, user: User, db: Session) -> Nursery:
     nursery = db.get(Nursery, nursery_id)
@@ -96,17 +140,28 @@ def list_my_nursery_plants(
     owner: User = Depends(require_roles(RoleName.NURSERY)),
     db: Session = Depends(get_db),
 ):
-    stmt = (
-        select(Plant)
-        .join(Nursery, Plant.nursery_id == Nursery.id)
-        .where(Nursery.owner_id == owner.id)
-    )
+    # 1. প্রথমে বের করতে হবে এই ওনারের আন্ডারে কোন নার্সারিগুলো আছে
+    nursery_ids = db.scalars(
+        select(Nursery.id).where(Nursery.owner_id == owner.id)
+    ).all()
+
+    if not nursery_ids:
+        return []
+
+    # 2. কঠোরভাবে শুধু ওই নার্সারি আইডির প্ল্যান্টগুলোই ফিল্টার করা হবে
+    stmt = select(Plant).where(Plant.nursery_id.in_(nursery_ids))
+
     if category:
         stmt = stmt.where(Plant.category.ilike(category))
     if availability:
         stmt = stmt.where(Plant.availability_status == availability.value)
-    return db.scalars(stmt.order_by(Plant.id.desc()).offset(skip).limit(limit)).all()
-
+        
+    plants = db.scalars(
+        stmt.order_by(Plant.id.desc()).offset(skip).limit(limit)
+    ).all()
+    
+    logger.info("Loaded %d plants for nursery owner %s", len(plants), owner.id)
+    return plants
 
 @router.put("/{nursery_id}", response_model=NurseryOut, summary="Update Nursery Profile")
 def update_nursery_profile(
@@ -258,3 +313,6 @@ def list_nursery_plants(
     if availability:
         stmt = stmt.where(Plant.availability_status == availability.value)
     return db.scalars(stmt.order_by(Plant.id.desc()).offset(skip).limit(limit)).all()
+
+
+

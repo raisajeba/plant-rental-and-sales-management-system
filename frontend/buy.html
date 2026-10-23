@@ -22,19 +22,86 @@
         <div id="message" class="alert hidden"></div>
 
         <!-- Filter & Search Bar -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-          <p style="color: #666; margin: 0;">Explore our collection of fresh plants available for purchase.</p>
-          <input type="text" id="searchInput" placeholder="Search plants..." style="padding: 0.5rem 1rem; border: 1px solid #ddd; border-radius: 6px; width: 250px;" />
+        <div class="buy-toolbar">
+          <p class="catalog-intro">Explore our collection of fresh plants available for purchase.</p>
+          <div class="buy-toolbar-actions">
+            <input type="text" id="searchInput" placeholder="Search plants..." aria-label="Search plants" />
+            <button class="btn btn-reset buy-cart-trigger" id="openCartButton" type="button" aria-haspopup="dialog" aria-controls="buyCartDialog">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h2l2.2 11.2a2 2 0 0 0 2 1.6h8.9a2 2 0 0 0 1.9-1.4L22 8H6" /><circle cx="10" cy="20" r="1" /><circle cx="18" cy="20" r="1" /></svg>
+              <span>Cart</span>
+              <span class="buy-cart-badge" id="cartItemCount" aria-label="0 items in cart" hidden>0</span>
+            </button>
+          </div>
         </div>
 
         <!-- Plants Grid Container (Real Backend Data will fill this) -->
-        <div id="buyPlantsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.5rem;">
+        <div id="buyPlantsGrid" aria-label="Plants available for purchase" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.5rem;">
           <!-- Dynamic cards will be injected here via buy.js -->
           <div class="card" style="padding: 1.5rem; text-align: center; color: #666;">Loading available plants...</div>
         </div>
       </div>
     </div>
   </div>
+
+  <dialog class="plant-quick-view" id="plantQuickViewDialog" aria-labelledby="quickViewTitle">
+    <div class="quick-view-header">
+      <p class="buy-cart-eyebrow">A CLOSER LOOK</p>
+      <button class="buy-cart-close" id="closeQuickViewButton" type="button" aria-label="Close plant details">×</button>
+    </div>
+    <div class="quick-view-body">
+      <img class="quick-view-image" id="quickViewImage" alt="" />
+      <div class="quick-view-details">
+        <p class="quick-view-category" id="quickViewCategory"></p>
+        <h2 id="quickViewTitle"></h2>
+        <p class="quick-view-nursery" id="quickViewNursery"></p>
+        <p class="quick-view-price" id="quickViewPrice"></p>
+        <dl class="quick-view-facts">
+          <div><dt>Care guide</dt><dd id="quickViewCare"></dd></div>
+          <div><dt>Availability</dt><dd id="quickViewStock"></dd></div>
+        </dl>
+        <button class="btn btn-primary" id="quickViewAction" type="button">Add to Cart</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="buy-cart-dialog" id="buyCartDialog" aria-labelledby="buyCartTitle">
+    <div class="buy-cart-header">
+      <div>
+        <p class="buy-cart-eyebrow">GREEN FOREST CHECKOUT</p>
+        <h2 id="buyCartTitle">Your cart</h2>
+        <p id="buyCartSummary" aria-live="polite">Loading your cart…</p>
+      </div>
+      <button class="buy-cart-close" id="closeCartButton" type="button" aria-label="Close cart">×</button>
+    </div>
+    <p class="buy-cart-feedback" id="cartFeedback" role="status" hidden></p>
+    <div class="buy-cart-items" id="cartItems" aria-live="polite">
+      <p class="plant-empty">Loading your cart…</p>
+    </div>
+    <section class="buy-cart-checkout" aria-label="Order summary">
+      <h3>Order summary</h3>
+      <dl class="buy-cart-breakdown">
+        <div><dt>Subtotal</dt><dd id="cartSubtotal">৳0.00</dd></div>
+        <div><dt>Taxes</dt><dd>Not calculated</dd></div>
+        <div><dt>Delivery</dt><dd>Not calculated</dd></div>
+      </dl>
+      <div class="buy-cart-delivery">
+        <strong>Delivery details</strong>
+        <div class="payment-contact-fields">
+          <label>Phone<input id="checkoutPhone" type="tel" autocomplete="tel" required minlength="5" maxlength="20" /></label>
+          <label>Address<input id="checkoutAddress" type="text" autocomplete="street-address" required minlength="3" maxlength="200" /></label>
+          <label>City<input id="checkoutCity" type="text" autocomplete="address-level2" required minlength="2" maxlength="50" /></label>
+          <label>Postcode<input id="checkoutPostcode" type="text" autocomplete="postal-code" required minlength="3" maxlength="20" /></label>
+        </div>
+      </div>
+      <div class="buy-cart-footer">
+        <div>
+          <span>Total amount</span>
+          <p class="buy-cart-total" id="cartTotal">৳0.00</p>
+        </div>
+        <button class="btn btn-primary" id="checkoutButton" type="button" disabled>Place Order</button>
+      </div>
+    </div>
+  </dialog>
 
   <script src="js/app.js"></script>
   <script src="js/layout.js"></script>

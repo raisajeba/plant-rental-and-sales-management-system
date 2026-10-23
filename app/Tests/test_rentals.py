@@ -287,11 +287,14 @@ def test_rental_request_persists_server_calculated_amount(rental_api):
     assert rental["rental_price_per_day"] == 5.5
     assert rental["total_amount"] == 44
     assert rental["status"] == "Pending"
+    assert rental["payment_status"] == "PENDING"
+    assert rental["rejection_reason"] is None
     with testing_session() as session:
         saved = session.get(PlantRentalOrder, rental["rental_id"])
         assert saved is not None
         assert saved.user_id == customer_id
         assert saved.total_amount == Decimal("44.00")
+        assert saved.payment_transaction_id is None
 
 
 def test_same_day_rental_has_minimum_one_day_duration(rental_api):
@@ -431,11 +434,11 @@ def test_owner_can_advance_owned_rental_status(rental_api):
 
     response = client.patch(
         f"/api/v1/rentals/owner/{created.json()['rental_id']}/status",
-        json={"status": "Confirmed"},
+        json={"status": "Approved"},
     )
 
     assert response.status_code == 200
-    assert response.json()["status"] == "Confirmed"
+    assert response.json()["status"] == "Approved"
 
 
 def test_owner_cannot_update_another_nurserys_rental_status(rental_api):
@@ -590,14 +593,38 @@ def test_owner_can_approve_available_rental_request(rental_api):
     assert response.json()["status"] == "Approved"
 
 
-def test_owner_rejection_requires_and_persists_reason(rental_api):
-    client, current_user, plant_ids, testing_session, *_rest = rental_api
+def test_owner_cannot_activate_rental_before_customer_payment(rental_api):
+    client, current_user, plant_ids, *_rest = rental_api
     created = client.post(
         "/api/v1/rentals/requests",
         json=rental_payload(plant_ids["Rentable Fern"]),
     )
     current_user["value"] = SimpleNamespace(
-        id=_rest[1],
+        id=_rest[2],
+        role=SimpleNamespace(role_name="Nursery"),
+    )
+    approval = client.patch(
+        f"/api/v1/rentals/owner/{created.json()['rental_id']}/status",
+        json={"status": "Approved"},
+    )
+    activation = client.patch(
+        f"/api/v1/rentals/owner/{created.json()['rental_id']}/status",
+        json={"status": "Active"},
+    )
+
+    assert approval.status_code == 200
+    assert activation.status_code == 409
+    assert "complete payment" in activation.json()["detail"]
+
+
+def test_owner_rejection_requires_reason_and_returns_safe_null(rental_api):
+    client, current_user, plant_ids, *_rest = rental_api
+    created = client.post(
+        "/api/v1/rentals/requests",
+        json=rental_payload(plant_ids["Rentable Fern"]),
+    )
+    current_user["value"] = SimpleNamespace(
+        id=_rest[2],
         role=SimpleNamespace(role_name="Nursery"),
     )
     status_url = f"/api/v1/rentals/owner/{created.json()['rental_id']}/status"
@@ -611,7 +638,5 @@ def test_owner_rejection_requires_and_persists_reason(rental_api):
     assert missing_reason.status_code == 422
     assert rejected.status_code == 200
     assert rejected.json()["status"] == "Rejected"
-    assert rejected.json()["rejection_reason"] == "Not enough stock"
-    with testing_session() as session:
-        saved = session.get(PlantRentalOrder, created.json()["rental_id"])
-        assert saved.rejection_reason == "Not enough stock"
+    assert rejected.json()["rejection_reason"] is None
+    assert not hasattr(PlantRentalOrder, "rejection_reason")

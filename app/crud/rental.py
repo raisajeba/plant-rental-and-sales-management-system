@@ -177,7 +177,6 @@ def create_rental_request(
             status_code=status.HTTP_409_CONFLICT,
             detail="The rental request could not be saved. Please try again.",
         ) from exc
-    db.refresh(rental_order)
     return rental_order
 
 
@@ -204,8 +203,9 @@ def list_owner_rental_requests(db: Session, *, owner_id: int) -> list[dict]:
             "rental_price_per_day": rental.rental_price_per_day,
             "total_amount": rental.total_amount,
             "status": rental.status,
+            "payment_status": rental.payment_status,
             "created_at": rental.created_at,
-            "rejection_reason": rental.rejection_reason,
+            "rejection_reason": None,
         }
         for rental, customer_name, plant_name in rows
     ]
@@ -216,9 +216,12 @@ def get_owner_rental_request(
 ) -> dict:
     rental = db.scalar(
         select(PlantRentalOrder)
+        .options(
+            joinedload(PlantRentalOrder.user),
+            joinedload(PlantRentalOrder.plant),
+        )
         .join(Plant, Plant.id == PlantRentalOrder.plant_id)
         .join(Nursery, Nursery.id == Plant.nursery_id)
-        .options(joinedload(PlantRentalOrder.user), joinedload(PlantRentalOrder.plant))
         .where(
             PlantRentalOrder.rental_id == rental_id,
             Nursery.owner_id == owner_id,
@@ -235,7 +238,9 @@ def get_owner_rental_request(
 def list_user_rental_history(db: Session, *, user_id: int) -> dict:
     rentals = db.scalars(
         select(PlantRentalOrder)
-        .options(joinedload(PlantRentalOrder.plant))
+        .options(
+            joinedload(PlantRentalOrder.plant),
+        )
         .where(PlantRentalOrder.user_id == user_id)
         .order_by(PlantRentalOrder.created_at.desc(), PlantRentalOrder.rental_id.desc())
     ).all()
@@ -255,8 +260,9 @@ def list_user_rental_history(db: Session, *, user_id: int) -> dict:
             "rental_price_per_day": rental.rental_price_per_day,
             "total_amount": rental.total_amount,
             "status": rental.status,
+            "payment_status": rental.payment_status,
             "created_at": rental.created_at,
-            "rejection_reason": rental.rejection_reason,
+            "rejection_reason": None,
         }
         if rental.status in _RENTAL_STATUSES_PREVIOUS or rental.rental_end_date < today:
             previous_orders.append(item)
@@ -280,7 +286,7 @@ def _rental_owner_output(rental: PlantRentalOrder) -> dict:
         "total_amount": rental.total_amount,
         "status": rental.status,
         "created_at": rental.created_at,
-        "rejection_reason": rental.rejection_reason,
+        "rejection_reason": None,
     }
 
 
@@ -311,7 +317,6 @@ def update_owner_rental_status(
     allowed_transitions = {
         RentalStatus.PENDING: {
             RentalStatus.APPROVED,
-            RentalStatus.CONFIRMED,
             RentalStatus.REJECTED,
             RentalStatus.CANCELLED,
         },
@@ -331,6 +336,14 @@ def update_owner_rental_status(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Cannot change rental status from {rental.status.value} to {new_status.value}",
+        )
+    if (
+        new_status == RentalStatus.ACTIVE
+        and rental.payment_status.upper() != "PAID"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The customer must complete payment before the rental can become active.",
         )
 
     if new_status in (RentalStatus.APPROVED, RentalStatus.CONFIRMED):
@@ -389,11 +402,7 @@ def update_owner_rental_status(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="A rejection reason is required.",
             )
-        rental.rejection_reason = rejection_reason.strip()
-    else:
-        rental.rejection_reason = None
 
     rental.status = new_status
     db.commit()
-    db.refresh(rental)
     return _rental_owner_output(rental)

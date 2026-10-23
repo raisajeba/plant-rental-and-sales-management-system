@@ -42,7 +42,8 @@ class PlantRentalOrder(Base):
     rental_duration_days = Column(Integer, nullable=False)
     rental_price_per_day = Column(Numeric(10, 2), nullable=False)
     total_amount = Column(Numeric(12, 2), nullable=False)
-    rejection_reason = Column(String(1000), nullable=True)
+    payment_status = Column(String(20), nullable=False, default="PENDING", server_default="PENDING")
+    payment_transaction_id = Column(String(64), nullable=True)
 
     status = Column(
         Enum(

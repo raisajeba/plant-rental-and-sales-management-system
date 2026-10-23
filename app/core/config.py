@@ -1,5 +1,4 @@
 """Application settings, loaded from environment variables / .env file."""
-from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -8,15 +7,13 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     API_V1_PREFIX: str = "/api/v1"
 
-    # Database: DATABASE_URL দিলে সরাসরি সেটি ব্যবহার করবে (যেমন SQLite)
+    # Database
     DATABASE_URL: str | None = None
-
-    # MySQL Fallback Settings (এখন এগুলো অপশনাল করা হয়েছে)
     DB_HOST: str = "localhost"
     DB_PORT: int = 3306
     DB_NAME: str = "greennest"
     DB_USER: str = "greennest_user"
-    DB_PASSWORD: str = "sraboni"
+    DB_PASSWORD: str
 
     # JWT
     SECRET_KEY: str
@@ -30,6 +27,12 @@ class Settings(BaseSettings):
     ADMIN_EMAIL: str | None = None
     ADMIN_PASSWORD: str | None = None
 
+    # SSLCommerz
+    SSLCOMMERZ_STORE_ID: str
+    SSLCOMMERZ_STORE_PASSWORD: str
+    SSLCOMMERZ_IS_SANDBOX: bool = True
+    PUBLIC_BASE_URL: str | None = None
+
     @property
     def sync_database_url(self) -> str:
         """DATABASE_URL থাকলে সেটি নেবে, না থাকলে MySQL URL তৈরি করবে।"""
@@ -40,7 +43,6 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
-@lru_cache
 def get_settings() -> Settings:
     return Settings()
 

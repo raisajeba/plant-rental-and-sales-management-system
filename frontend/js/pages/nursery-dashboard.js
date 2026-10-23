@@ -1,3 +1,6 @@
+/* =========================================================
+   PAGE: nursery-dashboard
+   ========================================================= */
 function initNurseryDashboard() {
   if (!getToken()) {
     window.location.replace("login.html");
@@ -6,8 +9,9 @@ function initNurseryDashboard() {
 
   async function loadDashboardStats() {
     try {
-      // Backend API endpoints for nursery overview
-      const stats = await apiRequest("/api/v1/nursery/stats", { auth: true });
+      // Correct plural endpoint matching router prefix: /nurseries/stats
+      const stats = await apiRequest("/nurseries/stats", { auth: true });
+      
       if (stats) {
         document.getElementById("totalPlantsCount").textContent = stats.total_plants || 0;
         document.getElementById("pendingOrdersCount").textContent = stats.pending_orders || 0;
@@ -16,6 +20,9 @@ function initNurseryDashboard() {
       }
     } catch (err) {
       console.error("Failed to load dashboard metrics", err);
+      if (typeof showMessage === "function") {
+        showMessage(err.message, "error");
+      }
     }
   }
 

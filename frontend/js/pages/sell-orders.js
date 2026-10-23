@@ -2,6 +2,8 @@ const SELL_ORDER_STATUSES = [
   "Pending",
   "Confirmed",
   "Processing",
+  "Shipped",
+  "Delivered",
   "Completed",
   "Cancelled",
 ];
@@ -34,9 +36,15 @@ function createSellOrderStatusControl(order, refreshOrders) {
   const container = document.createElement("div");
   container.className = "sell-order-status-control";
 
-  const badge = document.createElement("span");
-  badge.className = `badge ${order.status.toLowerCase()}`;
-  badge.textContent = order.status;
+  const paymentBadge = document.createElement("span");
+  const paymentStatus = (order.payment_status || "PENDING").toUpperCase();
+  paymentBadge.className = `badge payment-${paymentStatus.toLowerCase()}`;
+  paymentBadge.textContent = paymentStatus;
+
+  const statusBadge = document.createElement("span");
+  const orderStatus = String(order.status).toUpperCase();
+  statusBadge.className = `badge order-${orderStatus.toLowerCase()}`;
+  statusBadge.textContent = orderStatus;
 
   const select = document.createElement("select");
   select.setAttribute("aria-label", `Update status for order ${order.id}`);
@@ -69,7 +77,7 @@ function createSellOrderStatusControl(order, refreshOrders) {
     }
   });
 
-  container.append(badge, select, updateButton);
+  container.append(paymentBadge, statusBadge, select, updateButton);
   return container;
 }
 
@@ -143,7 +151,7 @@ function initSellOrders() {
 
   async function loadSellOrders() {
     try {
-      const orders = await apiRequest("/orders/owner", { auth: true });
+      const orders = await apiRequest("/nursery/sell-orders", { auth: true });
       renderSellOrders(tbody, orders, loadSellOrders);
     } catch (error) {
       showMessage(error.message);

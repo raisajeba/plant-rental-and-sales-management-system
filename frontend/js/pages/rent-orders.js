@@ -6,8 +6,8 @@ function initRentOrders() {
 
   const tbody = document.getElementById("rentOrdersTableBody");
   const transitions = {
-    Pending: ["Confirmed", "Cancelled"],
-    Confirmed: ["Active", "Cancelled"],
+    Approved: ["Active", "Cancelled"],
+    Confirmed: ["Active"],// changed here
     Active: ["Completed"],
   };
 
@@ -51,7 +51,39 @@ function initRentOrders() {
         statusCell.replaceChildren(badge);
 
         const actionCell = row.insertCell();
-        const nextStatuses = transitions[order.status] || [];
+        if (order.status === "Pending") {
+          const acceptButton = document.createElement("button");
+          acceptButton.type = "button";
+          acceptButton.className = "btn btn-primary";
+          acceptButton.textContent = "Accept";
+          acceptButton.addEventListener("click", () => {
+            void updateRentalStatus(order, "Approved", null, acceptButton);
+          });
+          const rejectButton = document.createElement("button");
+          rejectButton.type = "button";
+          rejectButton.className = "btn btn-reset";
+          rejectButton.textContent = "Reject";
+          rejectButton.addEventListener("click", () => {
+            const reason = window.prompt("Enter a reason for rejecting this request:");
+            if (reason === null) return;
+            if (!reason.trim()) {
+              showMessage("A rejection reason is required.");
+              return;
+            }
+            void updateRentalStatus(order, "Rejected", reason.trim(), rejectButton);
+          });
+          actionCell.append(acceptButton, rejectButton);
+          return;
+        }
+
+        const nextStatuses = [...(transitions[order.status] || [])];
+        if (
+          ["Approved", "Confirmed"].includes(order.status) &&
+          String(order.payment_status).toUpperCase() !== "PAID"
+        ) {
+          const activeIndex = nextStatuses.indexOf("Active");
+          if (activeIndex >= 0) nextStatuses.splice(activeIndex, 1);
+        }
         if (nextStatuses.length === 0) {
           actionCell.textContent = "No further actions";
           return;
@@ -79,19 +111,7 @@ function initRentOrders() {
             showMessage("Select a valid next status.");
             return;
           }
-          updateButton.disabled = true;
-          try {
-            await apiRequest(`/rentals/owner/${order.id}/status`, {
-              method: "PATCH",
-              auth: true,
-              body: { status: statusSelect.value },
-            });
-            showMessage(`Rental #${order.id} updated.`, "success");
-            await loadRentOrders();
-          } catch (error) {
-            showMessage(error.message);
-            updateButton.disabled = false;
-          }
+          await updateRentalStatus(order, statusSelect.value, null, updateButton);
         });
         actionCell.append(statusSelect, updateButton);
       });
@@ -103,6 +123,24 @@ function initRentOrders() {
       cell.colSpan = 8;
       cell.style.textAlign = "center";
       cell.textContent = "Failed to load orders.";
+    }
+  }
+
+  async function updateRentalStatus(order, status, rejectionReason, button) {
+    button.disabled = true;
+    try {
+      const body = { status };
+      if (rejectionReason) body.rejection_reason = rejectionReason;
+      await apiRequest(`/rentals/owner/${order.id}/status`, {
+        method: "PATCH",
+        auth: true,
+        body,
+      });
+      showMessage(`Rental #${order.id} updated to ${status}.`, "success");
+      await loadRentOrders();
+    } catch (error) {
+      showMessage(error.message);
+      button.disabled = false;
     }
   }
 
