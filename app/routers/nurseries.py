@@ -85,23 +85,83 @@ def _get_owned_nursery(nursery_id: int, user: User, db: Session) -> Nursery:
 
 
 @router.post("", response_model=NurseryOut, status_code=status.HTTP_201_CREATED)
-def create_nursery(
-    payload: NurseryCreate,
+async def create_nursery(
+    request: Request,
     owner: User = Depends(require_roles(RoleName.NURSERY)),
     db: Session = Depends(get_db),
 ):
+    content_type = request.headers.get("content-type", "").split(";", 1)[0].lower()
+    image: UploadFile | None = None
+    fields = {}
+
+    if content_type == "multipart/form-data":
+        form = await request.form()
+        for key, value in form.multi_items():
+            if key == "file":
+                if not isinstance(value, UploadFile):
+                    raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid image upload")
+                image = value
+            else:
+                fields[key] = value
+    elif content_type == "application/json":
+        fields = await request.json()
+    else:
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            "Send nursery data as JSON or multipart/form-data",
+        )
+
+    try:
+        payload = NurseryCreate.model_validate(fields)
+    except ValidationError as error:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=error.errors(include_context=False, include_url=False),
+        )
+
     duplicate = db.scalar(
         select(Nursery.id).where(Nursery.owner_id == owner.id, Nursery.name == payload.name)
     )
     if duplicate:
         raise HTTPException(status.HTTP_409_CONFLICT, "You already have a nursery with this name")
 
-    nursery = Nursery(owner_id=owner.id, **payload.model_dump())
+    # Image processing
+    image_data = None
+    image_extension = None
+    if image is not None and image.filename:
+        image_extension = PLANT_IMAGE_CONTENT_TYPES.get(image.content_type or "")
+        if image_extension is None:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Only JPG, PNG, and WEBP images are allowed",
+            )
+        image_data = await image.read(MAX_PLANT_IMAGE_SIZE + 1)
+        if len(image_data) > MAX_PLANT_IMAGE_SIZE:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Images must not exceed 5 MB")
+
+    data = payload.model_dump()
+    image_path = None
+    if image_data is not None and image_extension is not None:
+        filename = f"nursery_{uuid4().hex}{image_extension}"
+        image_path = PLANT_IMAGE_DIR / filename
+        try:
+            PLANT_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+            image_path.write_bytes(image_data)
+        except OSError as error:
+            raise HTTPException(
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "The nursery image could not be saved",
+            ) from error
+        data["image_url"] = f"/uploads/plants/{filename}"
+
+    nursery = Nursery(owner_id=owner.id, **data)
     db.add(nursery)
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
+        if image_path is not None:
+            image_path.unlink(missing_ok=True)
         raise HTTPException(status.HTTP_409_CONFLICT, "You already have a nursery with this name")
     db.refresh(nursery)
     return nursery
@@ -164,16 +224,86 @@ def list_my_nursery_plants(
     return plants
 
 @router.put("/{nursery_id}", response_model=NurseryOut, summary="Update Nursery Profile")
-def update_nursery_profile(
+async def update_nursery_profile(
     nursery_id: int,
-    payload: NurseryUpdate,
+    request: Request,
     owner: User = Depends(require_roles(RoleName.NURSERY)),
     db: Session = Depends(get_db),
 ):
-    """Update nursery details with authorization and ownership checks."""
+    """Update nursery details and profile image with authorization and ownership checks."""
     nursery = _get_owned_nursery(nursery_id, owner, db)
-    updated_nursery = crud_nursery.update_nursery(db, db_nursery=nursery, nursery_in=payload)
-    return updated_nursery
+
+    content_type = request.headers.get("content-type", "").split(";", 1)[0].lower()
+    image: UploadFile | None = None
+    fields = {}
+
+    if content_type == "multipart/form-data":
+        form = await request.form()
+        for key, value in form.multi_items():
+            if key == "file":
+                if not isinstance(value, UploadFile):
+                    raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid image upload")
+                image = value
+            else:
+                fields[key] = value
+    elif content_type == "application/json":
+        fields = await request.json()
+    else:
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            "Send nursery data as JSON or multipart/form-data",
+        )
+
+    try:
+        payload = NurseryUpdate.model_validate(fields)
+    except ValidationError as error:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=error.errors(include_context=False, include_url=False),
+        )
+
+    # Image processing (plant image upload er motoi)
+    image_data = None
+    image_extension = None
+    if image is not None and image.filename:
+        image_extension = PLANT_IMAGE_CONTENT_TYPES.get(image.content_type or "")
+        if image_extension is None:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Only JPG, PNG, and WEBP images are allowed",
+            )
+        image_data = await image.read(MAX_PLANT_IMAGE_SIZE + 1)
+        if len(image_data) > MAX_PLANT_IMAGE_SIZE:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Images must not exceed 5 MB")
+
+    data = payload.model_dump(exclude_unset=True)
+    image_path = None
+    if image_data is not None and image_extension is not None:
+        filename = f"nursery_{uuid4().hex}{image_extension}"
+        image_path = PLANT_IMAGE_DIR / filename
+        try:
+            PLANT_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+            image_path.write_bytes(image_data)
+        except OSError as error:
+            raise HTTPException(
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "The nursery image could not be saved",
+            ) from error
+        data["image_url"] = f"/uploads/plants/{filename}"
+
+    # Update nursery via CRUD
+    for key, value in data.items():
+        setattr(nursery, key, value)
+    
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        if image_path is not None:
+            image_path.unlink(missing_ok=True)
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Failed to update nursery.")
+    db.refresh(nursery)
+    return nursery
 
 
 @router.get("", response_model=list[NurseryOut])

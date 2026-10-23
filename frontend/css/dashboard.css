@@ -235,18 +235,36 @@ a.user-chip.active { background: var(--green-100); border-color: var(--green-700
 .rental-request-form label { display: grid; gap: 5px; font-size: 14px; font-weight: 600; }
 .rental-request-form input { box-sizing: border-box; width: 100%; min-width: 0; padding: 9px 10px; }
 .rental-request-form button, .plant-store-action { width: 100%; white-space: normal; }
-.plant-store-card { display: flex; flex-direction: column; justify-content: space-between; gap: 14px; min-width: 0; padding: 16px; }
-.plant-card-actions { display: flex; gap: 9px; }
-.plant-card-actions .plant-store-action { flex: 1; width: auto; }
-.plant-card-details-action {
-  min-height: 40px;
-  padding: 8px 14px;
-  border: 1px solid var(--green-700);
-  border-radius: 8px;
-  background: #fff;
-  color: var(--green-900);
-  font-weight: 700;
+/* Shob carder height equal ebong align rakhar jonno */
+.plant-store-card { 
+  display: flex; 
+  flex-direction: column; 
+  justify-content: space-between; 
+  gap: 14px; 
+  min-width: 0; 
+  padding: 16px; 
+  height: 100%; /* Eta add korle sob card soman height er hobe */
+}
+
+/* Rental form-ke carder niche properly push korar jonno */
+.rental-request-form { 
+  display: grid; 
+  grid-template-columns: 1fr; 
+  gap: 10px; 
+  margin-top: auto; /* Eta form-gula ke carder nicher dike nicely align korbe */
+}
+.plant-card-actions { 
+  display: flex; 
+  gap: 8px; 
+}
+.plant-card-actions .plant-store-action,
+.plant-card-actions .plant-card-details-action {
+  flex: 1; 
+  width: auto;
+  padding: 8px 4px; /* padding ektu komiye dewa holo */
+  font-size: 0.8rem; /* font size ektu choto korle lekha r bhangbe na */
   white-space: nowrap;
+  text-align: center;
 }
 .plant-card-details-action:hover { background: var(--green-100); }
 .plant-store-placeholder {
@@ -698,4 +716,124 @@ textarea:focus { outline: 2px solid var(--green-100); border-color: var(--green-
 
 @media (max-width: 860px) {
   .plant-results-header { align-items: flex-start; flex-direction: column; gap: 0; }
+}
+
+
+/* ==========================================================================
+   Nursery Dashboard Tables & Forms Layout Fix
+   ========================================================================== */
+
+/* Main content width extension & proper spacing */
+.content {
+  max-width: 1360px !important;
+  width: 100% !important;
+  margin: 0 auto;
+  padding: 32px 28px !important;
+}
+
+/* Card Container Modernization */
+.card {
+  background: #ffffff;
+  border: 1px solid #e3e8e4;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 4px 20px rgba(15, 77, 31, 0.04);
+}
+
+.card h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--green-900, #0f4d1f);
+  margin-bottom: 24px;
+}
+
+/* ---------- Table Layout Improvements ---------- */
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 8px;
+}
+
+table th {
+  background: #f7f9f7;
+  color: #55665a;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid #e3e8e4;
+}
+
+table th:first-child { border-top-left-radius: 10px; }
+table th:last-child { border-top-right-radius: 10px; }
+
+table td {
+  padding: 16px 18px;
+  font-size: 14.5px;
+  color: #1f3829;
+  border-bottom: 1px solid #f0f3f0;
+  vertical-align: middle;
+}
+
+table tr:last-child td {
+  border-bottom: none;
+}
+
+table tr:hover td {
+  background: #fbfdfb;
+}
+
+/* ---------- Action Controls (Select & Buttons in Table) ---------- */
+table td form,
+table td .action-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+table select {
+  min-width: 140px;
+  padding: 8px 12px;
+  font-size: 13.5px;
+  border-radius: 8px;
+  border: 1px solid #d4dcd5;
+  background-color: #fff;
+}
+
+table .btn,
+table td button {
+  padding: 8px 16px !important;
+  font-size: 13px !important;
+  border-radius: 8px !important;
+  white-space: nowrap;
+}
+
+/* ---------- Badges for Status & Availability ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.badge-success, .badge.active, .badge.available {
+  background: #e5f3e8;
+  color: #1b7a2e;
+}
+
+.badge-warning, .badge.pending {
+  background: #fff0e0;
+  color: #d9640f;
+}
+
+.badge-danger, .badge.rejected, .badge.cancelled {
+  background: #fdecea;
+  color: #b3261e;
 }

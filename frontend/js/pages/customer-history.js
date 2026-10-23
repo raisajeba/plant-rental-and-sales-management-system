@@ -186,8 +186,22 @@ document.getElementById("cancelRentalPaymentButton").addEventListener("click", (
   document.getElementById("rentalPaymentDialog").close();
 });
 
-window.dashboardShell.ready.then(({ user }) => {
+/*window.dashboardShell.ready.then(({ user }) => {
   if (user && user.role.role_name === "User") {
     loadCustomerHistory();
   }
+}); 
+*/
+
+window.dashboardShell.ready.then(({ user }) => {
+  if (user && user.role && user.role.role_name) {
+    const roleName = user.role.role_name.toLowerCase();
+    // Case-insensitive check ba user/customer role allow kora
+    if (roleName === "user" || roleName === "customer") {
+      loadCustomerHistory();
+      return;
+    }
+  }
+  // Jodi role match na kore ba unauthenticated thake
+  window.location.href = "/login.html";
 });
