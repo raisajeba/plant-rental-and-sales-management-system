@@ -1,11 +1,11 @@
 const SELL_ORDER_STATUSES = [
-  "Pending",
+  //"Pending",
   "Confirmed",
   "Processing",
   "Shipped",
   "Delivered",
   "Completed",
-  "Cancelled",
+  //"Cancelled",
 ];
 
 function appendSellOrderDetails(row, order) {

@@ -27,7 +27,7 @@
       <a href="#catalog" data-view-target="catalog">Plants</a>
       <a href="#catalog" data-view-target="catalog" data-catalog-mode="rent">Rent</a>
       <a href="#catalog" data-view-target="catalog" data-catalog-mode="sale">Buy</a>
-      <a href="#sell" data-view-target="home">Sell</a>
+      <a href="#sell" data-view-target="home" onclick="document.getElementById('sell')?.scrollIntoView({behavior: 'smooth'})">Sell</a>
       <a href="#maintenance" data-view-target="maintenance">Maintenance</a>
       <a href="#about" data-view-target="about">About</a>
       <a href="#contact" data-view-target="contact">Contact Us</a>
@@ -55,10 +55,16 @@
           <div><span class="landing-highlight-icon" aria-hidden="true">♧</span><span><strong>Eco-friendly</strong><small>Good for you, better for earth</small></span></div>
         </div>
       </div>
-      <div class="landing-hero-visual" role="img" aria-label="Sunlit room filled with lush green plants">
-        <div class="landing-hero-caption"><span class="landing-caption-dot"></span><span><strong>Grow where you are</strong><small>Make room for a little more life</small></span></div>
-        <span class="landing-hero-stamp" aria-hidden="true">LIVE<br />A LITTLE<br />GREENER</span>
-      </div>
+      <div class="landing-hero-visual" role="img" aria-label="Lush green plants and care">
+  <div class="landing-hero-caption">
+    <span class="landing-caption-dot"></span>
+    <span>
+      <strong>Grow where you are</strong>
+      <small>Make room for a little more life</small>
+    </span>
+  </div>
+  <span class="landing-hero-stamp" aria-hidden="true">LIVE<br />A LITTLE<br />GREENER</span>
+</div>
       <div class="landing-hero-orb" aria-hidden="true"></div>
     </section>
 
@@ -68,26 +74,40 @@
         <p>From a forever favorite to a little greenery for the weekend, find the right fit for you.</p>
       </div>
       <div class="landing-category-grid">
-        <article class="landing-category-card landing-category-buy">
-          <span class="landing-category-number">01 / MAKE IT YOURS</span>
-          <div class="landing-category-icon" aria-hidden="true">↗</div>
-          <h3>Buy plants</h3>
-          <p>Find the plants you'll love growing at home, season after season.</p>
-          <a href="#catalog" data-view-target="catalog" data-catalog-mode="sale">Shop plants <span aria-hidden="true">→</span></a>
+        <article class="landing-category-card">
+          <div class="landing-category-thumb">
+            <img src="./images/buy-bg.jpg" alt="Buy plants" />
+            <span class="landing-category-badge" aria-hidden="true">🌱</span>
+          </div>
+          <div class="landing-category-content">
+            <h3>Buy plants</h3>
+            <p>Find the plants you'll love growing at home, season after season.</p>
+            <a href="#catalog" data-view-target="catalog" data-catalog-mode="sale">Shop plants <span aria-hidden="true">→</span></a>
+          </div>
         </article>
-        <article class="landing-category-card landing-category-rent">
-          <span class="landing-category-number">02 / FLEXIBLE GREEN</span>
-          <div class="landing-category-icon" aria-hidden="true">⌁</div>
-          <h3>Rent plants</h3>
-          <p>Enjoy fresh greenery without the long-term commitment. Easy and lovely.</p>
-          <a href="#catalog" data-view-target="catalog" data-catalog-mode="rent">Browse rentals <span aria-hidden="true">→</span></a>
+
+        <article class="landing-category-card">
+          <div class="landing-category-thumb">
+            <img src="./images/rent-bg.jpg" alt="Rent plants" />
+            <span class="landing-category-badge" aria-hidden="true">🏠</span>
+          </div>
+          <div class="landing-category-content">
+            <h3>Rent plants</h3>
+            <p>Enjoy fresh greenery without the long-term commitment. Easy and lovely.</p>
+            <a href="#catalog" data-view-target="catalog" data-catalog-mode="rent">Browse rentals <span aria-hidden="true">→</span></a>
+          </div>
         </article>
-        <article class="landing-category-card landing-category-event">
-          <span class="landing-category-number">03 / MAKE IT A MOMENT</span>
-          <div class="landing-category-icon" aria-hidden="true">✳</div>
-          <h3>Event plants</h3>
-          <p>Set the scene for celebrations, gatherings, and the moments worth remembering.</p>
-          <a href="#catalog" data-view-target="catalog" data-catalog-mode="rent">Explore event plants <span aria-hidden="true">→</span></a>
+
+        <article class="landing-category-card">
+          <div class="landing-category-thumb">
+            <img src="./images/event-bg.jpg" alt="Event plants" />
+            <span class="landing-category-badge" aria-hidden="true">📅</span>
+          </div>
+          <div class="landing-category-content">
+            <h3>Event plants</h3>
+            <p>Set the scene for celebrations, gatherings, and the moments worth remembering.</p>
+            <a href="#catalog" data-view-target="catalog" data-catalog-mode="rent">Explore event plants <span aria-hidden="true">→</span></a>
+          </div>
         </article>
       </div>
     </section>

@@ -462,7 +462,7 @@
     body.style.visibility = "visible";
   }
 
-  async function init() {
+ async function init() {
     try {
       const user = await apiRequest("/users/me", { auth: true });
       const role = user.role && user.role.role_name;
@@ -480,6 +480,18 @@
           window.location.replace("login.html");
         }
         return { user: null };
+      }
+
+      // Jodi user-er role Nursery hoy, tahole tar nursery profile theke image_url niye user.profile_image update kore dewa
+      if (role === "Nursery") {
+        try {
+          const nursery = await apiRequest("/nurseries/me", { auth: true });
+          if (nursery && nursery.image_url) {
+            user.profile_image = nursery.image_url;
+          }
+        } catch (err) {
+          console.log("No nursery profile found for sidebar image yet:", err);
+        }
       }
 
       const menu = await apiRequest("/pages/my-menu", { auth: true });
