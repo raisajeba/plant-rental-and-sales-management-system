@@ -320,14 +320,26 @@ def initiate_payment(
     return PaymentInitiateResponse(gateway_url=gateway_url, transaction_id=transaction_id)
 
 
+
+from urllib.parse import urlencode
+from app.core.config import settings
+from fastapi.responses import RedirectResponse
+from fastapi import HTTPException, status
+
 def _redirect(status_value: str, transaction_id: str = "") -> RedirectResponse:
     query = {"status": status_value}
     if transaction_id:
         query["order_id"] = transaction_id
-    return RedirectResponse(
-        f"/customer-history.html?{urlencode(query)}",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
+
+    frontend_base = settings.FRONTEND_BASE_URL
+    if not frontend_base:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Frontend URL is not configured for payment redirects",
+        )
+
+    target = f"{frontend_base.rstrip('/')}/payment-result.html?{urlencode(query)}"
+    return RedirectResponse(target, status_code=status.HTTP_303_SEE_OTHER)
 
 
 async def _form_value(request: Request, key: str) -> str:

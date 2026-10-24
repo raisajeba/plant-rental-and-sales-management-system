@@ -13,7 +13,7 @@ from app.core.constants import AvailabilityStatus, RoleName
 from app.crud import nursery as crud_nursery
 from app.database import get_db
 from app.dependencies.auth import require_roles
-from app.models import Nursery, Plant, User
+from app.models import Nursery, Plant, User, Order, PlantRentalOrder, OrderItem
 from app.schemas.nursery import NurseryCreate, NurseryOut, NurseryUpdate
 from app.schemas.plant import PlantCreate, PlantOut
 
@@ -42,7 +42,7 @@ def get_nursery_owner_stats(
         nursery_ids = db.scalars(
             select(Nursery.id).where(Nursery.owner_id == owner.id)
         ).all()
-
+        
         if not nursery_ids:
             return {
                 "total_plants": 0,
@@ -50,27 +50,64 @@ def get_nursery_owner_stats(
                 "active_rentals": 0,
                 "total_revenue": 0
             }
-
+        
+        # 1. Total live listings
         total_plants = db.scalar(
             select(func.count(Plant.id)).where(Plant.nursery_id.in_(nursery_ids))
         ) or 0
 
+        plant_ids = db.scalars(
+            select(Plant.id).where(Plant.nursery_id.in_(nursery_ids))
+        ).all()
+
+        pending_orders = 0
+        active_rentals = 0
+        total_revenue = 0.0
+
+        if plant_ids:
+            # 2. Pending sell orders count (Only count PAID & pending orders)
+            pending_orders = db.scalar(
+                select(func.count(Order.id)).where(
+                    Order.id.in_(
+                        select(OrderItem.order_id).where(OrderItem.plant_id.in_(plant_ids))
+                    ),
+                    func.lower(Order.payment_status) == "paid",
+                    func.lower(Order.status) == "pending"
+                )
+            ) or 0
+
+            # 3. Active rentals count
+            active_rentals = db.scalar(
+                select(func.count(PlantRentalOrder.rental_id)).where(
+                    PlantRentalOrder.plant_id.in_(plant_ids),
+                    func.lower(PlantRentalOrder.status) == "active"
+                )
+            ) or 0
+            
+            # 4. Total Revenue (Only Sell Orders Revenue)
+            paid_order_ids_subq = select(OrderItem.order_id).join(Plant).where(Plant.nursery_id.in_(nursery_ids))
+            total_revenue = db.scalar(
+                select(func.sum(Order.total_amount)).where(
+                    Order.id.in_(paid_order_ids_subq),
+                    func.lower(Order.payment_status) == "paid"
+                )
+            ) or 0.0
+           
         return {
             "total_plants": total_plants,
-            "pending_orders": 0,
-            "active_rentals": 0,
-            "total_revenue": 0
+            "pending_orders": pending_orders,
+            "active_rentals": active_rentals,
+            "total_revenue": total_revenue
         }
+        
     except Exception as e:
-        db.rollback()
-        logger.error("Stats error: %s", str(e))
+        print("CRITICAL STATS ERROR:", str(e))
         return {
             "total_plants": 0,
             "pending_orders": 0,
             "active_rentals": 0,
             "total_revenue": 0
         }
-
 def _get_owned_nursery(nursery_id: int, user: User, db: Session) -> Nursery:
     nursery = db.get(Nursery, nursery_id)
     if nursery is None:

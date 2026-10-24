@@ -420,6 +420,9 @@ def update_owner_maintenance_record(
         request.status = RequestStatus.IN_PROGRESS.value
     elif payload.status == "completed":
         request.status = RequestStatus.RESOLVED.value
-
+   
     db.commit()
     db.refresh(request)
+    
+    # Ekhane return statement-ti add kore dite hobe:
+    return _owner_record_out(request, plant, customer)

@@ -82,3 +82,6 @@ class Plant(TimestampMixin, Base):
     )
     purchase_orders = relationship("PurchaseOrder", back_populates="plant")
     rental_orders = relationship("PlantRentalOrder", back_populates="plant")
+    
+    # Review relationship added here
+    reviews = relationship("Review", back_populates="plant", cascade="all, delete-orphan")

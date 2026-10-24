@@ -14,10 +14,10 @@ from app.models.cart_item import CartItem
 from app.models.order import Order, OrderItem, RentalOrder
 from app.models.payment_transaction import PaymentTransaction
 from app.models.rental import PlantRentalOrder, RentalStatus
-
+from app.models.review import Review
 __all__ = [
     "User", "Role", "Page", "RolePage", "RevokedToken", "Cart", "CartItem",
     "MaintenanceSchedule", "MaintenanceRequest", "ContactMessage",
     "Nursery", "Plant", "PurchaseOrder", "OrderStatus", "Order", "OrderItem",
-    "RentalOrder", "PlantRentalOrder", "RentalStatus", "PaymentTransaction",
+    "RentalOrder", "PlantRentalOrder", "RentalStatus", "PaymentTransaction","Review"
 ]
