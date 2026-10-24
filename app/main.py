@@ -20,13 +20,17 @@ from app.routers import (
     contact,
     maintenance,
     nurseries,
-    order,  # Added for purchase orders
+    order,
     payment,
     pages,
     plants,
-    rentals,  # Rentals Router Here
+    rentals,
+    reviews,  # <--- Review router import kora holo
     users,
 )
+
+
+    
 from app.seed import seed_initial_data
 
 logging.basicConfig(
@@ -113,6 +117,7 @@ for r in (
     order.nursery_sell_orders_router,
     payment.router,
     rentals.router,  # <--- rentals.router অন্তর্ভুক্ত করা হলো
+    reviews.router,  # <--- reviews.router অন্তর্ভুক্ত করা হলো
     pages.router,
     maintenance.router,
     contact.router,

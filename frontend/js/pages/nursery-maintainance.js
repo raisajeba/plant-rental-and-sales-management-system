@@ -1,4 +1,4 @@
- (function () {
+(function () {
     "use strict";
 
     const $ = (id) => document.getElementById(id);
@@ -247,7 +247,7 @@
         button.disabled = true;
 
         try {
-            const response = await apiRequest(
+            await apiRequest(
                 `/maintenance/owner/records/${record.id}`,
                 {
                     method: "PATCH",
@@ -256,23 +256,16 @@
                 }
             );
 
-            // Response-ti jodi wrapper (e.g. { message, data }) hoy, tahole response.data ba direct response use hobe
-            const updated = response.data || response;
-
-            records = records.map((item) =>
-                item.id === updated.id ? updated : item
-            );
-
-            renderRecords();
+            // Reload fresh records directly from backend
+            await loadData();
 
             if (typeof showMessage === "function") {
                 showMessage("Maintenance record updated.", "success");
             }
         }
-
         catch (error) {
             if (typeof showMessage === "function") {
-                showMessage(error.message, "error");
+                showMessage(error.message || "Something went wrong", "error");
             }
 
             button.disabled = false;

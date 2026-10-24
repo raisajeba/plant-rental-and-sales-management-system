@@ -35,6 +35,14 @@ function initBuyPage() {
   const quickViewCare = document.getElementById("quickViewCare");
   const quickViewStock = document.getElementById("quickViewStock");
   const quickViewAction = document.getElementById("quickViewAction");
+  
+  // Review elements inside Quick View
+  const reviewsListContainer = quickViewDialog.querySelector(".reviews-list-container");
+  const quickViewReviewForm = document.getElementById("quickViewReviewForm");
+  const reviewRatingSelect = quickViewReviewForm ? quickViewReviewForm.querySelector(".review-rating-select") : null;
+  const reviewCommentInput = quickViewReviewForm ? quickViewReviewForm.querySelector(".review-comment-input") : null;
+  const reviewSubmitButton = quickViewReviewForm ? quickViewReviewForm.querySelector("button[type='submit']") : null;
+
   let availablePlants = [];
   let quickViewPlant = null;
   let currentCartItems = [];
@@ -76,6 +84,56 @@ function initBuyPage() {
     }
   }
 
+  async function fetchAndDisplayReviews(plantId) {
+    if (!reviewsListContainer) return;
+    reviewsListContainer.replaceChildren();
+    const loadingText = document.createElement("p");
+    loadingText.className = "no-reviews-text";
+    loadingText.textContent = "Loading reviews...";
+    reviewsListContainer.append(loadingText);
+
+    try {
+      const reviews = await apiRequest(`/reviews/plant/${plantId}`);
+      // Ensure we are still looking at the same plant modal
+      if (!quickViewPlant || quickViewPlant.id !== plantId) return;
+
+      reviewsListContainer.replaceChildren();
+      if (!reviews || reviews.length === 0) {
+        const emptyText = document.createElement("p");
+        emptyText.textContent = "No reviews yet. Be the first to review!";
+        emptyText.style.color = "#666";
+        reviewsListContainer.append(emptyText);
+        return;
+      }
+
+      for (const review of reviews) {
+        const reviewItem = document.createElement("div");
+        reviewItem.style.borderBottom = "1px solid #f0f0f0";
+        reviewItem.style.padding = "6px 0";
+
+        const ratingDiv = document.createElement("div");
+        ratingDiv.style.fontWeight = "600";
+        ratingDiv.style.color = "#2e7d32";
+        ratingDiv.textContent = `Rating: ${'★'.repeat(review.rating)}`;
+
+        const commentP = document.createElement("p");
+        commentP.style.margin = "2px 0";
+        commentP.style.color = "#333";
+        commentP.textContent = review.comment; // Safe text rendering
+
+        reviewItem.append(ratingDiv, commentP);
+        reviewsListContainer.append(reviewItem);
+      }
+    } catch (error) {
+      if (!quickViewPlant || quickViewPlant.id !== plantId) return;
+      reviewsListContainer.replaceChildren();
+      const errorText = document.createElement("p");
+      errorText.textContent = "Failed to load reviews.";
+      errorText.style.color = "#d9534f";
+      reviewsListContainer.append(errorText);
+    }
+  }
+
   function openQuickView(plant) {
     quickViewPlant = plant;
     quickViewTitle.textContent = plant.name;
@@ -94,7 +152,43 @@ function initBuyPage() {
       quickViewImage.removeAttribute("src");
     }
     quickViewAction.disabled = plant.available_quantity < 1;
+    
+    if (reviewCommentInput) reviewCommentInput.value = "";
+    if (reviewRatingSelect) reviewRatingSelect.value = "5";
+
+    fetchAndDisplayReviews(plant.id);
     quickViewDialog.showModal();
+  }
+
+  if (quickViewReviewForm) {
+    quickViewReviewForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!quickViewPlant) return;
+
+      const rating = Number(reviewRatingSelect.value);
+      const comment = reviewCommentInput.value.trim();
+      if (!comment) return;
+
+      if (reviewSubmitButton) reviewSubmitButton.disabled = true;
+      try {
+        await apiRequest("/reviews", {
+          method: "POST",
+          auth: true,
+          body: {
+            plant_id: quickViewPlant.id,
+            rating: rating,
+            comment: comment
+          }
+        });
+        showMessage("Review submitted successfully!", "success");
+        reviewCommentInput.value = "";
+        await fetchAndDisplayReviews(quickViewPlant.id);
+      } catch (error) {
+        showMessage(error.message);
+      } finally {
+        if (reviewSubmitButton) reviewSubmitButton.disabled = false;
+      }
+    });
   }
 
   function renderPlants(searchTerm = "") {
@@ -353,6 +447,7 @@ function initBuyPage() {
   cartDialog.addEventListener("click", (event) => {
     if (event.target === cartDialog) cartDialog.close();
   });
+  
   checkoutButton.addEventListener("click", async () => {
     const itemsInCart = await loadCart();
     if (!itemsInCart || itemsInCart.length === 0) {
@@ -392,6 +487,12 @@ function initBuyPage() {
           postcode: checkoutFields.postcode.value.trim(),
         },
       });
+
+      const currentToken = localStorage.getItem("greennest_token");
+      if (currentToken) {
+        sessionStorage.setItem("greennest_token_backup", currentToken);
+      }
+
       window.location.href = data.GatewayPageURL;
     } catch (error) {
       setCartFeedback(error.message);
@@ -406,7 +507,7 @@ function initBuyPage() {
       }
     }
   });
-  loadBuyPlants();
+
   loadBuyPlants();
   if (new URLSearchParams(window.location.search).get("view") === "cart") {
     cartDialog.showModal();

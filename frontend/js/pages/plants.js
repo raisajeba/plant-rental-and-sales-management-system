@@ -105,6 +105,104 @@
 
       cartForm.append(quantityGroup, addButton);
       card.append(cartForm);
+
+      // --- Review Button & Form Section ---
+      // --- Review Button & Form Section ---
+      const reviewButton = document.createElement("button");
+      reviewButton.className = "btn btn-reset";
+      reviewButton.type = "button";
+      reviewButton.textContent = "💬 Reviews & Ratings";
+      reviewButton.style.marginTop = "10px";
+
+      const reviewContainer = document.createElement("div");
+      reviewContainer.className = "plant-review-box hidden";
+      reviewContainer.style.marginTop = "8px";
+      reviewContainer.style.paddingTop = "8px";
+      reviewContainer.style.borderTop = "1px solid #eee";
+
+      reviewContainer.innerHTML = `
+        <div class="reviews-list-container" style="max-height: 150px; overflow-y: auto; margin-bottom: 8px; font-size: 13px; color: #555;">
+          <p class="no-reviews-text">Loading reviews...</p>
+        </div>
+        <form class="inline-review-form">
+          <select class="review-rating-select" style="padding: 3px; font-size: 12px; margin-bottom: 5px;">
+            <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+            <option value="4">⭐⭐⭐⭐ (4)</option>
+            <option value="3">⭐⭐⭐ (3)</option>
+            <option value="2">⭐⭐ (2)</option>
+            <option value="1">⭐ (1)</option>
+          </select>
+          <input type="text" class="review-comment-input" placeholder="Write a review..." style="width: 100%; padding: 5px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 5px;" required />
+          <button type="submit" class="btn btn-primary" style="padding: 3px 8px; font-size: 11px;">Submit Review</button>
+        </form>
+      `;
+
+      const reviewsListContainer = reviewContainer.querySelector(".reviews-list-container");
+
+      // Function to fetch and display reviews
+      async function fetchAndDisplayReviews() {
+        try {
+          const reviews = await apiRequest(`/reviews/plant/${plant.id}`);
+          reviewsListContainer.replaceChildren();
+
+          if (reviews.length === 0) {
+            const emptyText = document.createElement("p");
+            emptyText.textContent = "No reviews yet. Be the first to review!";
+            emptyText.style.color = "#666";
+            reviewsListContainer.append(emptyText);
+            return;
+          }
+
+          for (const review of reviews) {
+            const reviewItem = document.createElement("div");
+            reviewItem.style.borderBottom = "1px solid #f0f0f0";
+            reviewItem.style.padding = "4px 0";
+            reviewItem.innerHTML = `
+              <div style="font-weight: 600; color: #2e7d32;">Rating: ${'⭐'.repeat(review.rating)}</div>
+              <p style="margin: 2px 0; color: #333;">${review.comment}</p>
+            `;
+            reviewsListContainer.append(reviewItem);
+          }
+        } catch (error) {
+          reviewsListContainer.textContent = "Failed to load reviews.";
+        }
+      }
+
+      // Toggle review box & load reviews on click
+      reviewButton.addEventListener("click", () => {
+        const isHidden = reviewContainer.classList.toggle("hidden");
+        if (!isHidden) {
+          fetchAndDisplayReviews();
+        }
+      });
+
+      // Submit new review
+      reviewContainer.querySelector("form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const rating = reviewContainer.querySelector(".review-rating-select").value;
+        const comment = reviewContainer.querySelector(".review-comment-input").value;
+        
+        try {
+          await apiRequest("/reviews", {
+            method: "POST",
+            auth: true,
+            body: {
+              plant_id: plant.id,
+              rating: Number(rating),
+              comment: comment
+            }
+          });
+          showMessage("Review submitted successfully!", "success");
+          reviewContainer.querySelector(".review-comment-input").value = "";
+          await fetchAndDisplayReviews(); // Refresh review list
+        } catch (error) {
+          showMessage(error.message);
+        }
+      });
+
+      card.append(reviewButton, reviewContainer);
+      // ------------------------------------
+
       results.append(card);
     }
   }

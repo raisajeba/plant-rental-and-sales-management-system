@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     SSLCOMMERZ_STORE_PASSWORD: str
     SSLCOMMERZ_IS_SANDBOX: bool = True
     PUBLIC_BASE_URL: str | None = None
+    FRONTEND_BASE_URL: str | None = "http://localhost:5500/frontend"  # /frontend path ti add kore din
 
     @property
     def sync_database_url(self) -> str:
