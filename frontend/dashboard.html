@@ -34,28 +34,28 @@
           <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem;">
             <div style="background: #e6f4ea; padding: 0.75rem; border-radius: 8px; font-size: 1.25rem;">📦</div>
             <div>
-              <h3 style="margin: 0; font-size: 1.5rem;">5</h3>
+              <h3 id="statOrders" style="margin: 0; font-size: 1.5rem;">0</h3>
               <p style="margin: 0; color: #666; font-size: 0.9rem;">My Orders</p>
             </div>
           </div>
           <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem;">
             <div style="background: #e6f4ea; padding: 0.75rem; border-radius: 8px; font-size: 1.25rem;">🌿</div>
             <div>
-              <h3 style="margin: 0; font-size: 1.5rem;">2</h3>
+              <h3 id="statActiveRentals" style="margin: 0; font-size: 1.5rem;">0</h3>
               <p style="margin: 0; color: #666; font-size: 0.9rem;">Active Rentals</p>
             </div>
           </div>
           <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem;">
             <div style="background: #e6f4ea; padding: 0.75rem; border-radius: 8px; font-size: 1.25rem;">💧</div>
             <div>
-              <h3 style="margin: 0; font-size: 1.5rem;">3</h3>
+              <h3 id="statMaintenance" style="margin: 0; font-size: 1.5rem;">0</h3>
               <p style="margin: 0; color: #666; font-size: 0.9rem;">Upcoming Maintenance</p>
             </div>
           </div>
           <div class="card" style="padding: 1.25rem; display: flex; align-items: center; gap: 1rem;">
             <div style="background: #e6f4ea; padding: 0.75rem; border-radius: 8px; font-size: 1.25rem;">✅</div>
             <div>
-              <h3 style="margin: 0; font-size: 1.5rem;">4</h3>
+              <h3 id="statCompletedRentals" style="margin: 0; font-size: 1.5rem;">0</h3>
               <p style="margin: 0; color: #666; font-size: 0.9rem;">Completed Rentals</p>
             </div>
           </div>
@@ -100,66 +100,29 @@
               </table>
             </section>
 
-            <!-- My Active Rentals Section (Matching Figma) -->
-            <section class="card" style="padding: 1.25rem;">
-              <h3 style="margin-bottom: 1rem;">My Active Rentals</h3>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                <div style="border: 1px solid #eaeaea; border-radius: 8px; padding: 0.75rem; display: flex; gap: 0.75rem; align-items: center;">
-                  <div style="width: 60px; height: 60px; background: #f2f2f2; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">🪴</div>
-                  <div>
-                    <strong style="font-size: 0.95rem;">Areca Palm</strong>
-                    <p style="margin: 0.2rem 0; font-size: 0.75rem; color: #666;">20 Sep 2026 – 30 Sep</p>
-                    <span style="background: #e6f4ea; color: #137333; font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 4px;">Active</span>
-                  </div>
-                </div>
-                <div style="border: 1px solid #eaeaea; border-radius: 8px; padding: 0.75rem; display: flex; gap: 0.75rem; align-items: center;">
-                  <div style="width: 60px; height: 60px; background: #f2f2f2; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">🌿</div>
-                  <div>
-                    <strong style="font-size: 0.95rem;">Monstera</strong>
-                    <p style="margin: 0.2rem 0; font-size: 0.75rem; color: #666;">18 Sep 2026 – 18 Oct</p>
-                    <span style="background: #e6f4ea; color: #137333; font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 4px;">Active</span>
-                  </div>
-                </div>
-              </div>
-            </section>
+            <!-- My Active Rentals Section -->
+<section class="card" style="padding: 1.25rem;">
+  <h3 style="margin-bottom: 1rem;">My Active Rentals</h3>
+  <!-- ekhane id="activeRentalsGrid" add kora holo -->
+  <div id="activeRentalsGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+    <!-- Dynamic active rentals will be loaded here by dashboard.js -->
+  </div>
+</section>
           </div>
 
           <!-- Right Column: Upcoming Maintenance -->
-          <div>
-            <section class="card" style="padding: 1.25rem;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h3 style="margin: 0;">Upcoming Maintenance</h3>
-                <span>🌱</span>
-              </div>
-              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                <div style="padding: 0.75rem; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #f9ab00;">
-                  <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <strong style="font-size: 0.9rem;">Areca Palm 💧</strong>
-                    <span style="background: #fef7e0; color: #b06000; font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 4px;">Pending</span>
-                  </div>
-                  <p style="margin: 0.3rem 0 0 0; font-size: 0.8rem; color: #666;">💧 Watering Task · Due: 24 Sep</p>
-                </div>
-                
-                <div style="padding: 0.75rem; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #1a73e8;">
-                  <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <strong style="font-size: 0.9rem;">Snake Plant 💧</strong>
-                    <span style="background: #e8f0fe; color: #1967d2; font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 4px;">Upcoming</span>
-                  </div>
-                  <p style="margin: 0.3rem 0 0 0; font-size: 0.8rem; color: #666;">💧 Watering Task · Due: 26 Sep</p>
-                </div>
-
-                <div style="padding: 0.75rem; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #1a73e8;">
-                  <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <strong style="font-size: 0.9rem;">Monstera 🛍️</strong>
-                    <span style="background: #e8f0fe; color: #1967d2; font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 4px;">Upcoming</span>
-                  </div>
-                  <p style="margin: 0.3rem 0 0 0; font-size: 0.8rem; color: #666;">🌾 Fertilizing Task · Due: 29 Sep</p>
-                </div>
-              </div>
-              <button style="width: 100%; margin-top: 1rem; background: #0d3b1e; color: #fff; border: none; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer;">View All Maintenance</button>
-            </section>
-          </div>
-
+<div>
+  <section class="card" style="padding: 1.25rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h3 style="margin: 0;">Upcoming Maintenance</h3>
+      <span>🌱</span>
+    </div>
+    <!-- ekhane id="upcomingMaintenanceList" add kora holo -->
+    <div id="upcomingMaintenanceList" style="display: flex; flex-direction: column; gap: 0.75rem;">
+      <!-- Dynamic maintenance tasks will be loaded here by dashboard.js -->
+    </div>
+    <a href="maintenance.html" style="display: block; text-align: center; width: 100%; margin-top: 1rem; background: #0d3b1e; color: #fff; border: none; padding: 0.75rem; border-radius: 6px; font-weight: 600; text-decoration: none; cursor: pointer;">View All Maintenance</a>
+</div>
         </div>
 
       </div>

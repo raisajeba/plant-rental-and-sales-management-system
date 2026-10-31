@@ -98,28 +98,37 @@
         body.append(row);
     }
 
-    function renderStats() {
+   function renderStats() {
         const pending = schedules.filter((s) => s.status === "pending");
         const activeRequests = requests.filter((r) => r.status !== "cancelled");
-        const openRequests = activeRequests.filter((r) => r.status === "open");
+        const openRequests = activeRequests.filter((r) => r.status === "open" || r.status === "in_progress");
+        
+        // 1. Completed schedules ebong Completed/Resolved requests
+        const completedSchedules = schedules.filter((s) => s.status === "completed");
+        const completedRequests = requests.filter((r) => r.status === "completed" || r.status === "resolved");
 
+        // 2. Overdue schedules ebong Overdue open requests
+        const overdueSchedules = pending.filter((t) => daysUntil(t.due_date) < 0);
+        const overdueRequests = openRequests.filter((r) => r.preferred_date && daysUntil(r.preferred_date) < 0);
+
+        // 3. Upcoming schedules (care schedule er future tasks)
+        const upcomingSchedules = pending.filter((t) => daysUntil(t.due_date) > 0);
+
+        // UI-te values update kora
         if ($("statPending")) {
-            $("statPending").textContent = pending.length + openRequests.filter((r) => !r.preferred_date).length;
+            $("statPending").textContent = pending.length;
         }
         if ($("statOverdue")) {
-            $("statOverdue").textContent = pending.filter((t) => daysUntil(t.due_date) < 0).length +
-                openRequests.filter((r) => r.preferred_date && daysUntil(r.preferred_date) < 0).length;
+            $("statOverdue").textContent = overdueSchedules.length + overdueRequests.length;
         }
         if ($("statUpcoming")) {
-            $("statUpcoming").textContent = pending.filter((t) => daysUntil(t.due_date) > 0).length +
-                openRequests.filter((r) => r.preferred_date && daysUntil(r.preferred_date) > 0).length;
+            $("statUpcoming").textContent = upcomingSchedules.length;
         }
         if ($("statCompleted")) {
-            $("statCompleted").textContent = schedules.filter((s) => s.status === "completed").length +
-                activeRequests.filter((r) => r.status === "resolved").length;
+            $("statCompleted").textContent = completedSchedules.length + completedRequests.length;
         }
         if ($("statRequests")) {
-            $("statRequests").textContent = activeRequests.filter((r) => r.status === "open" || r.status === "in_progress").length;
+            $("statRequests").textContent = openRequests.length;
         }
     }
 
@@ -449,7 +458,7 @@
             safeHideMessage();
 
             const plantInput = $("requestPlant");
-            const nurseryInput = $("requestNursery");
+            const nurseryInput = $("requestNursery"); // Ei dropdown theke value asbe
             const requestTypeInput = $("requestType");
             const preferredDateInput = $("preferredDate");
             const descriptionInput = $("requestDescription");
@@ -459,13 +468,7 @@
             }
 
             const plant_name_val = plantInput ? plantInput.value.trim() : "";
-            const nursery_val = nurseryInput ? nurseryInput.value.trim() : "";
-            
-            // Combine plant name and nursery name safely so backend doesn't crash on nursery lookup
-            let final_plant_name = plant_name_val;
-            if (nursery_val) {
-                final_plant_name = plant_name_val ? `${plant_name_val} (${nursery_val})` : nursery_val;
-            }
+            const nursery_id_val = nurseryInput ? nurseryInput.value.trim() : ""; // Nursery ID ekhane capture hobe
 
             const request_type = requestTypeInput.value;
             const preferred_date = preferredDateInput.value;
@@ -475,13 +478,19 @@
             if (description.length > 1000) return fail("The description must be at most 1000 characters.");
             if (preferred_date && preferred_date < isoToday()) return fail("The preferred date cannot be in the past.");
 
-            // Send only universally accepted fields (plant_name, request_type, description, preferred_date)
+            // Request body toiri kora hocche
             const body = { 
                 request_type, 
                 description 
             };
-            if (final_plant_name) body.plant_name = final_plant_name;
+            
+            if (plant_name_val) body.plant_name = plant_name_val;
             if (preferred_date) body.preferred_date = preferred_date;
+            
+            // **Ekhane nursery_id add kora holo** jate backend-e sothik vabe jay
+            if (nursery_id_val) {
+                body.nursery_id = Number(nursery_id_val);
+            }
 
             const button = $("requestSubmitBtn");
             safeSetLoading(button, true, "Submitting...");

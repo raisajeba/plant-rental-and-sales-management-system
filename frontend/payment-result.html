@@ -67,9 +67,10 @@
     <button id="actionBtn" class="btn-dashboard" style="display: none;">Go to Dashboard</button>
   </div>
 
-  <script src="js/api.js"></script>
+  <!-- FIXED: api.js er bodole app.js use kora holo jate apiRequest function pawa jay -->
+  <script src="js/app.js"></script>
   <script>
-    // Token recovery check (SSLCommerz redirect-er shomoy token lost howa theke bachanor jonno)
+    // Immediate Token Recovery from sessionStorage backup
     const backupToken = sessionStorage.getItem("greennest_token_backup");
     if (backupToken && !localStorage.getItem("greennest_token")) {
       localStorage.setItem("greennest_token", backupToken);
@@ -103,26 +104,42 @@
       actionBtn.textContent = "Back to Dashboard";
     }
 
-    // Role-aware dynamic dashboard redirection on click
-    actionBtn.addEventListener("click", async () => {
-      actionBtn.disabled = true;
-      actionBtn.textContent = "Redirecting...";
-      try {
-        const user = await apiRequest("/auth/me", { auth: true });
-        const roleName = user && user.role ? user.role.role_name : "";
+    // Role-aware dynamic dashboard redirection on click (Updated & Fallback Safe)
+actionBtn.addEventListener("click", async () => {
+  // Ensure token is restored from backup session storage
+  const backupToken = sessionStorage.getItem("greennest_token_backup");
+  if (backupToken && !localStorage.getItem("greennest_token")) {
+    localStorage.setItem("greennest_token", backupToken);
+  }
 
-        if (roleName === "Nursery Owner") {
-          window.location.href = "nursery-dashboard.html";
-        } else if (roleName === "Admin") {
-          window.location.href = "admin-dashboard.html";
-        } else {
-          window.location.href = "dashboard.html";
-        }
-      } catch (err) {
-        // Fallback to customer dashboard or login if token is invalid
-        window.location.href = "dashboard.html";
-      }
-    });
+  actionBtn.disabled = true;
+  actionBtn.textContent = "Redirecting...";
+
+  // Direct safe fallback: Check token existence first
+  const currentToken = localStorage.getItem("greennest_token");
+  if (!currentToken) {
+    // If no token at all, fallback to login
+    window.location.href = "login.html";
+    return;
+  }
+
+  try {
+    // Try fetching user role via API
+    const user = await apiRequest("/users/me", { auth: true });
+    const roleName = user && user.role ? user.role.role_name : "";
+
+    if (roleName === "Nursery Owner") {
+      window.location.href = "nursery-dashboard.html";
+    } else if (roleName === "Admin") {
+      window.location.href = "admin-dashboard.html";
+    } else {
+      window.location.href = "dashboard.html";
+    }
+  } catch (err) {
+    // If API check fails for any reason but token exists, force redirect to dashboard safely
+    window.location.href = "dashboard.html";
+  }
+});
   </script>
 </body>
 </html>
