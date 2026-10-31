@@ -6,7 +6,7 @@ function initRentOrders() {
 
   const tbody = document.getElementById("rentOrdersTableBody");
   const transitions = {
-    Approved: ["Active", "Cancelled"],
+    Approved: ["Active"],
     Confirmed: ["Active"],// changed here
     Active: ["Completed"],
   };

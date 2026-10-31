@@ -343,7 +343,7 @@ function initLandingPage() {
     wrapper.append(document.createTextNode(suffix));
     const strong = document.createElement("strong");
     const amount = Number(price);
-    strong.textContent = `$${Number.isFinite(amount) ? amount.toFixed(2) : "—"}`;
+    strong.textContent = `৳${Number.isFinite(amount) ? amount.toFixed(2) : "—"}`;
     if (suffix === "Rent") {
       const unit = document.createElement("small");
       unit.textContent = " / day";
@@ -688,70 +688,63 @@ function initRegisterPage() {
 
   const form = document.getElementById("registerForm");
   const button = document.getElementById("submitBtn");
+  const roleSelect = document.getElementById("role");
+  const nurseryFieldsGroup = document.getElementById("nurseryFieldsGroup");
+
+  // Role select change listener
+  roleSelect.addEventListener("change", () => {
+    if (roleSelect.value === "Nursery") {
+      nurseryFieldsGroup.style.display = "block";
+    } else {
+      nurseryFieldsGroup.style.display = "none";
+    }
+  });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     hideMessage();
 
-    const name =
-      document.getElementById("name").value.trim();
-
-    const email =
-      document.getElementById("email").value.trim();
-
-    const role =
-      document.getElementById("role").value;
-
-    const password =
-      document.getElementById("password").value;
-
-    const confirmPassword =
-      document.getElementById("confirmPassword").value;
+    const name = document.getElementById("name").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const role = roleSelect.value;
+    const password = document.getElementById("password").value;
+    const confirmPassword = document.getElementById("confirmPassword").value;
+    
+    // Nursery name jodi Nursery select kora thake
+    const nurseryName = role === "Nursery" ? document.getElementById("nurseryName").value.trim() : null;
 
     if (name.length < 2) {
-      return showMessage(
-        "Name must be at least 2 characters."
-      );
+      return showMessage("Name must be at least 2 characters.");
     }
 
     if (!isValidEmail(email)) {
-      return showMessage(
-        "Please enter a valid email address."
-      );
+      return showMessage("Please enter a valid email address.");
+    }
+
+    if (role === "Nursery" && !nurseryName) {
+      return showMessage("Please enter your nursery name.");
     }
 
     if (password !== confirmPassword) {
-      return showMessage(
-        "Passwords do not match."
-      );
+      return showMessage("Passwords do not match.");
     }
 
-    setLoading(
-      button,
-      true,
-      "Creating account..."
-    );
+    setLoading(button, true, "Creating account...");
 
     try {
+      // Backend request-e nursery_name o pathiye dite parbe jodi backend support kore
+      const requestBody = { name, email, password, role };
+      if (nurseryName) {
+        requestBody.nursery_name = nurseryName;
+      }
+
       await apiRequest("/auth/register", {
         method: "POST",
-        body: {
-          name,
-          email,
-          password,
-          role,
-        },
+        body: requestBody,
       });
 
-      showMessage(
-        "Account created! Redirecting to login...",
-        "success"
-      );
-
-      setTimeout(
-        () => (window.location.href = "login.html"),
-        1500
-      );
+      showMessage("Account created! Redirecting to login...", "success");
+      setTimeout(() => (window.location.href = "login.html"), 1500);
     } catch (err) {
       showMessage(err.message);
       setLoading(button, false);

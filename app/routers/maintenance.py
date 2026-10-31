@@ -271,6 +271,7 @@ def my_requests(
     user: User = Depends(require_roles(RoleName.USER)),
     db: Session = Depends(get_db),
 ):
+    # Customer-এর নিজের তৈরি করা Requests (যেখানে nursery_id আছে অথবা user নিজে submit করেছে)
     stmt = (
         select(MaintenanceRequest)
         .where(MaintenanceRequest.user_id == user.id)
@@ -371,18 +372,32 @@ def create_owner_maintenance_record(
     if customer is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Plant/customer association not found")
 
+    # 1. MaintenanceRequest (Owner History-র জন্য):
     request = MaintenanceRequest(
         user_id=customer.id,
+        nursery_id=plant.nursery_id,
         plant_name=plant.name,
         request_type=payload.request_type.value,
         description=payload.description,
         preferred_date=payload.preferred_date,
     )
     db.add(request)
+
+    # 2. ALSO Add to MaintenanceSchedule (Customer-এর 'My Care Schedule'-এর জন্য):
+    instructions_text = f"[Nursery Task] {payload.description}"
+    schedule = MaintenanceSchedule(
+        user_id=customer.id,
+        plant_name=plant.name,
+        task_type=payload.request_type.value,
+        instructions=instructions_text,
+        due_date=payload.preferred_date or date.today(),
+        status="pending"
+    )
+    db.add(schedule)
+
     db.commit()
     db.refresh(request)
     return _owner_record_out(request, plant, customer)
-
 
 @router.patch("/owner/records/{request_id}", response_model=NurseryMaintenanceOut)
 def update_owner_maintenance_record(

@@ -21,11 +21,18 @@
       <div class="content">
         <div id="message" class="alert hidden"></div>
 
-        <!-- Filter & Search Bar -->
+<!-- Filter & Search Bar -->
         <div class="buy-toolbar">
           <p class="catalog-intro">Explore our collection of fresh plants available for purchase.</p>
           <div class="buy-toolbar-actions">
-            <input type="text" id="searchInput" placeholder="Search plants..." aria-label="Search plants" />
+            <!-- Search Wrapper with Icon -->
+            <div style="position: relative; display: flex; align-items: center;">
+              <svg style="position: absolute; left: 12px; width: 16px; height: 16px; fill: #666; pointer-events: none;" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+              </svg>
+              <input type="text" id="searchInput" placeholder="Search plants..." aria-label="Search plants" style="padding-left: 36px;" />
+            </div>
+
             <button class="btn btn-reset buy-cart-trigger" id="openCartButton" type="button" aria-haspopup="dialog" aria-controls="buyCartDialog">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h2l2.2 11.2a2 2 0 0 0 2 1.6h8.9a2 2 0 0 0 1.9-1.4L22 8H6" /><circle cx="10" cy="20" r="1" /><circle cx="18" cy="20" r="1" /></svg>
               <span>Cart</span>

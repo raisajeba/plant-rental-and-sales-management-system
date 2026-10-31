@@ -108,14 +108,14 @@
             <form id="requestForm" novalidate>
               <div class="form-row">
                 <div class="form-group">
-                  <label for="requestPlant">Plant name (optional)</label>
-                  <input type="text" id="requestPlant" maxlength="100" placeholder="e.g. Areca Palm" />
+                  <label for="requestPlant">Plant name </label>
+                  <input type="text" id="requestPlant" maxlength="100" placeholder="e.g. Areca Palm" required />
                 </div>
                 <div class="form-group">
-                  <label for="requestNursery">Select Nursery (optional)</label>
-                  <select id="requestNursery">
-                    <option value="">Loading nurseries...</option>
-                  </select>
+                <label for="requestNursery">Select Nursery <span style="color: red;">*</span></label>
+                <select id="requestNursery" required>
+                <option value="" selected disabled>-- Select a Nursery --</option>
+                </select>
                 </div>
               </div>
               <div class="form-row">
